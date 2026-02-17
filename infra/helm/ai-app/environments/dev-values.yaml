@@ -1,0 +1,10 @@
+# Dev environment
+global:
+  environment: dev
+backend:
+  replicaCount: 2
+frontend:
+  replicaCount: 2
+gateway:
+  tls:
+    enabled: false

@@ -1,0 +1,62 @@
+{{- if .Values.gateway.enabled }}
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: {{ include "ai-app.fullname" . }}-backend-policy
+  labels:
+    {{- include "ai-app.labels" . | nindent 4 }}
+spec:
+  targetRef:
+    group: ""
+    kind: Service
+    name: {{ include "ai-app.fullname" . }}-backend
+  loadBalancer:
+    type: LeastRequest
+    slowStart:
+      window: 30s
+  timeout:
+    tcp:
+      connectTimeout: 10s
+    http:
+      requestTimeout: 300s  # 5 minutes for SSE streaming
+      connectionIdleTimeout: 300s
+  healthCheck:
+    passive:
+      splitExternalLocalOriginErrors: true
+      baseEjectionTime: 30s
+      consecutive5XxErrors: 5
+      interval: 5s
+      maxEjectionPercent: 100
+  compression:
+    type: Gzip
+    gzip:
+      quality: 6
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: {{ include "ai-app.fullname" . }}-frontend-policy
+  labels:
+    {{- include "ai-app.labels" . | nindent 4 }}
+spec:
+  targetRef:
+    group: ""
+    kind: Service
+    name: {{ include "ai-app.fullname" . }}-frontend
+  loadBalancer:
+    type: LeastRequest
+  timeout:
+    tcp:
+      connectTimeout: 10s
+    http:
+      requestTimeout: 60s
+  healthCheck:
+    passive:
+      splitExternalLocalOriginErrors: true
+      baseEjectionTime: 30s
+      consecutive5XxErrors: 5
+      interval: 5s
+      maxEjectionPercent: 100
+  compression:
+    type: Gzip
+{{- end }}

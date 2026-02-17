@@ -1,0 +1,74 @@
+{{- if .Values.gateway.enabled }}
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: {{ include "ai-app.fullname" . }}-security-policy
+  labels:
+    {{- include "ai-app.labels" . | nindent 4 }}
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: {{ include "ai-app.fullname" . }}-gateway
+  cors:
+    allowOrigins:
+    - "*"
+    allowMethods:
+    - GET
+    - POST
+    - PUT
+    - DELETE
+    - OPTIONS
+    allowHeaders:
+    - Content-Type
+    - Authorization
+    - X-Request-ID
+    exposeHeaders:
+    - X-Request-ID
+    - X-Process-Time
+    maxAge: 86400
+  basicAuth:
+    users:
+      name: {{ include "ai-app.fullname" . }}-basic-auth
+  jwt:
+    providers:
+    - name: azure-ad
+      issuer: https://login.microsoftonline.com/{{ .Values.azure.keyVault.tenantId }}/v2.0
+      audiences:
+      - api://{{ .Values.azure.workloadIdentity.clientId }}
+      remoteJWKS:
+        uri: https://login.microsoftonline.com/{{ .Values.azure.keyVault.tenantId }}/discovery/v2.0/keys
+  authorization:
+    defaultAction: Deny
+    rules:
+    # Allow health checks without auth
+    - name: health-check
+      action: Allow
+      principal:
+        clientCIDRs:
+        - 0.0.0.0/0
+      request:
+        paths:
+        - type: PathPrefix
+          value: /api/v1/health
+    # Allow frontend without auth
+    - name: frontend
+      action: Allow
+      principal:
+        clientCIDRs:
+        - 0.0.0.0/0
+      request:
+        paths:
+        - type: PathPrefix
+          value: /
+    # Require JWT for API endpoints
+    - name: api
+      action: Allow
+      principal:
+        jwt:
+          provider: azure-ad
+      request:
+        paths:
+        - type: PathPrefix
+          value: /api
+{{- end }}

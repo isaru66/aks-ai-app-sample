@@ -1,0 +1,81 @@
+{{- if .Values.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "ai-app.fullname" . }}-backend
+  labels:
+    {{- include "ai-app.backend.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "ai-app.backend.selectorLabels" . | nindent 6 }}
+  policyTypes:
+  {{- toYaml .Values.networkPolicy.policyTypes | nindent 2 }}
+  ingress:
+  # Allow from Envoy Gateway
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: envoy-gateway-system
+    ports:
+    - protocol: TCP
+      port: 8000
+  # Allow from frontend
+  - from:
+    - podSelector:
+        matchLabels:
+          {{- include "ai-app.frontend.selectorLabels" . | nindent 10 }}
+    ports:
+    - protocol: TCP
+      port: 8000
+  egress:
+  # Allow DNS
+  - to:
+    - namespaceSelector: {}
+    ports:
+    - protocol: UDP
+      port: 53
+  # Allow HTTPS (Azure services)
+  - to:
+    - podSelector: {}
+    ports:
+    - protocol: TCP
+      port: 443
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "ai-app.fullname" . }}-frontend
+  labels:
+    {{- include "ai-app.frontend.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "ai-app.frontend.selectorLabels" . | nindent 6 }}
+  policyTypes:
+  {{- toYaml .Values.networkPolicy.policyTypes | nindent 2 }}
+  ingress:
+  # Allow from Envoy Gateway
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: envoy-gateway-system
+    ports:
+    - protocol: TCP
+      port: 3000
+  egress:
+  # Allow DNS
+  - to:
+    - namespaceSelector: {}
+    ports:
+    - protocol: UDP
+      port: 53
+  # Allow to backend
+  - to:
+    - podSelector:
+        matchLabels:
+          {{- include "ai-app.backend.selectorLabels" . | nindent 10 }}
+    ports:
+    - protocol: TCP
+      port: 8000
+{{- end }}

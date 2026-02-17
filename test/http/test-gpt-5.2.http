@@ -1,0 +1,428 @@
+### GPT-5.2 API Test Suite
+### This file tests the GPT-5.2 endpoints with thinking/reasoning capabilities
+
+@baseUrl = http://localhost:8000
+@apiPrefix = /api/v1
+
+###############################################################################
+# Health Check Tests
+###############################################################################
+
+### 1. Health Check - Basic
+GET {{baseUrl}}{{apiPrefix}}/health/
+Content-Type: application/json
+
+### 2. Health Check - Readiness
+GET {{baseUrl}}{{apiPrefix}}/health/ready
+Content-Type: application/json
+
+### 3. Health Check - Liveness
+GET {{baseUrl}}{{apiPrefix}}/health/live
+Content-Type: application/json
+
+###############################################################################
+# Chat Completions - Streaming (with thinking)
+###############################################################################
+
+### 4. Simple Chat with Thinking - Streaming
+POST {{baseUrl}}{{apiPrefix}}/chat/completions
+Content-Type: application/json
+
+{
+  "messages": [
+    {
+      "role": "user",
+      "content": "Explain why the sky is blue in simple terms."
+    }
+  ],
+  "show_thinking": true,
+  "stream": true,
+  "temperature": 0.7
+}
+
+### 5. Complex Problem Solving with Thinking - Streaming
+POST {{baseUrl}}{{apiPrefix}}/chat/completions
+Content-Type: application/json
+
+{
+  "messages": [
+    {
+      "role": "user",
+      "content": "If I have 5 apples and give away 2, then buy 3 more, how many do I have? Show your reasoning step by step."
+    }
+  ],
+  "show_thinking": true,
+  "stream": true,
+  "temperature": 0.5
+}
+
+### 6. Multi-turn Conversation with Thinking - Streaming
+POST {{baseUrl}}{{apiPrefix}}/chat/completions
+Content-Type: application/json
+
+{
+  "messages": [
+    {
+      "role": "user",
+      "content": "What is photosynthesis?"
+    },
+    {
+      "role": "assistant",
+      "content": "Photosynthesis is the process by which plants convert light energy into chemical energy."
+    },
+    {
+      "role": "user",
+      "content": "What are the main steps involved?"
+    }
+  ],
+  "session_id": "test-session-001",
+  "show_thinking": true,
+  "stream": true,
+  "temperature": 0.7
+}
+
+### 7. Code Generation with Thinking - Streaming
+POST {{baseUrl}}{{apiPrefix}}/chat/completions
+Content-Type: application/json
+
+{
+  "messages": [
+    {
+      "role": "user",
+      "content": "Write a Python function to calculate fibonacci numbers recursively. Explain your approach."
+    }
+  ],
+  "show_thinking": true,
+  "stream": true,
+  "temperature": 0.3
+}
+
+###############################################################################
+# Chat Completions - Non-Streaming (Sync)
+###############################################################################
+
+### 8. Simple Chat with Thinking - Sync
+POST {{baseUrl}}{{apiPrefix}}/chat/completions/sync
+Content-Type: application/json
+
+{
+  "messages": [
+    {
+      "role": "user",
+      "content": "What is the capital of France?"
+    }
+  ],
+  "show_thinking": true,
+  "temperature": 0.5
+}
+
+### 9. Complex Reasoning - Sync
+POST {{baseUrl}}{{apiPrefix}}/chat/completions/sync
+Content-Type: application/json
+
+{
+  "messages": [
+    {
+      "role": "user",
+      "content": "Compare and contrast machine learning and deep learning. What are the key differences?"
+    }
+  ],
+  "show_thinking": true,
+  "temperature": 0.7
+}
+
+### 10. Math Problem Solving - Sync
+POST {{baseUrl}}{{apiPrefix}}/chat/completions/sync
+Content-Type: application/json
+
+{
+  "messages": [
+    {
+      "role": "user",
+      "content": "Solve: 2x + 5 = 15. Show all steps."
+    }
+  ],
+  "show_thinking": true,
+  "temperature": 0.3
+}
+
+###############################################################################
+# Chat WITHOUT Thinking (Faster responses)
+###############################################################################
+
+### 11. Quick Response without Thinking - Streaming
+POST {{baseUrl}}{{apiPrefix}}/chat/completions
+Content-Type: application/json
+
+{
+  "messages": [
+    {
+      "role": "user",
+      "content": "Say hello in 5 different languages."
+    }
+  ],
+  "show_thinking": false,
+  "stream": true,
+  "temperature": 0.5
+}
+
+### 12. Quick Response without Thinking - Sync
+POST {{baseUrl}}{{apiPrefix}}/chat/completions/sync
+Content-Type: application/json
+
+{
+  "messages": [
+    {
+      "role": "user",
+      "content": "List 3 benefits of exercise."
+    }
+  ],
+  "show_thinking": false,
+  "temperature": 0.5
+}
+
+###############################################################################
+# Session Management
+###############################################################################
+
+### 13. Create Session and Get History
+# First, send a message with a session ID
+POST {{baseUrl}}{{apiPrefix}}/chat/completions/sync
+Content-Type: application/json
+
+{
+  "messages": [
+    {
+      "role": "user",
+      "content": "Remember this: my favorite color is blue."
+    }
+  ],
+  "session_id": "test-session-history-001",
+  "user_id": "user-123",
+  "show_thinking": false,
+  "temperature": 0.5
+}
+
+### 14. Get Chat History by Session ID
+GET {{baseUrl}}{{apiPrefix}}/chat/history/test-session-history-001
+Content-Type: application/json
+
+### 15. Continue Conversation in Same Session
+POST {{baseUrl}}{{apiPrefix}}/chat/completions/sync
+Content-Type: application/json
+
+{
+  "messages": [
+    {
+      "role": "user",
+      "content": "What is my favorite color?"
+    }
+  ],
+  "session_id": "test-session-history-001",
+  "user_id": "user-123",
+  "show_thinking": false,
+  "temperature": 0.5
+}
+
+### 16. Delete Session
+DELETE {{baseUrl}}{{apiPrefix}}/chat/test-session-history-001
+Content-Type: application/json
+
+###############################################################################
+# Temperature Variations (Testing Creativity vs Precision)
+###############################################################################
+
+### 17. High Temperature (More Creative) - 1.5
+POST {{baseUrl}}{{apiPrefix}}/chat/completions/sync
+Content-Type: application/json
+
+{
+  "messages": [
+    {
+      "role": "user",
+      "content": "Write a creative one-sentence story about a robot."
+    }
+  ],
+  "show_thinking": false,
+  "temperature": 1.5
+}
+
+### 18. Low Temperature (More Precise) - 0.1
+POST {{baseUrl}}{{apiPrefix}}/chat/completions/sync
+Content-Type: application/json
+
+{
+  "messages": [
+    {
+      "role": "user",
+      "content": "What is 2+2?"
+    }
+  ],
+  "show_thinking": false,
+  "temperature": 0.1
+}
+
+###############################################################################
+# Edge Cases and Error Handling
+###############################################################################
+
+### 19. Empty Message (Should Fail)
+POST {{baseUrl}}{{apiPrefix}}/chat/completions/sync
+Content-Type: application/json
+
+{
+  "messages": [
+    {
+      "role": "user",
+      "content": ""
+    }
+  ],
+  "show_thinking": false
+}
+
+### 20. Very Long Input
+POST {{baseUrl}}{{apiPrefix}}/chat/completions/sync
+Content-Type: application/json
+
+{
+  "messages": [
+    {
+      "role": "user",
+      "content": "Explain the history of artificial intelligence from its inception in the 1950s through modern deep learning, covering key milestones, breakthrough technologies, influential researchers, major paradigm shifts, and the evolution of computational capabilities that enabled modern AI systems."
+    }
+  ],
+  "show_thinking": true,
+  "temperature": 0.7
+}
+
+###############################################################################
+# System Message Tests
+###############################################################################
+
+### 21. Chat with System Prompt
+POST {{baseUrl}}{{apiPrefix}}/chat/completions/sync
+Content-Type: application/json
+
+{
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a helpful assistant that speaks like a pirate."
+    },
+    {
+      "role": "user",
+      "content": "Tell me about the weather today."
+    }
+  ],
+  "show_thinking": false,
+  "temperature": 0.8
+}
+
+###############################################################################
+# Specialized Tasks
+###############################################################################
+
+### 22. Data Analysis with Thinking
+POST {{baseUrl}}{{apiPrefix}}/chat/completions/sync
+Content-Type: application/json
+
+{
+  "messages": [
+    {
+      "role": "user",
+      "content": "Given sales data: Jan: $10k, Feb: $15k, Mar: $12k, Apr: $18k. What's the trend and what should we expect for May?"
+    }
+  ],
+  "show_thinking": true,
+  "temperature": 0.4
+}
+
+### 23. Decision Making with Reasoning
+POST {{baseUrl}}{{apiPrefix}}/chat/completions/sync
+Content-Type: application/json
+
+{
+  "messages": [
+    {
+      "role": "user",
+      "content": "Should I use PostgreSQL or MongoDB for a social media application? Consider scalability, performance, and data structure."
+    }
+  ],
+  "show_thinking": true,
+  "temperature": 0.6
+}
+
+### 24. Code Review with Thinking
+POST {{baseUrl}}{{apiPrefix}}/chat/completions/sync
+Content-Type: application/json
+
+{
+  "messages": [
+    {
+      "role": "user",
+      "content": "Review this code and suggest improvements:\n\ndef calc(a, b):\n    return a + b\n\nresult = calc(5, 10)\nprint(result)"
+    }
+  ],
+  "show_thinking": true,
+  "temperature": 0.5
+}
+
+###############################################################################
+# Performance Testing
+###############################################################################
+
+### 25. Concurrent Session 1
+POST {{baseUrl}}{{apiPrefix}}/chat/completions/sync
+Content-Type: application/json
+
+{
+  "messages": [
+    {
+      "role": "user",
+      "content": "Quick test 1"
+    }
+  ],
+  "session_id": "concurrent-session-1",
+  "show_thinking": false,
+  "temperature": 0.5
+}
+
+### 26. Concurrent Session 2
+POST {{baseUrl}}{{apiPrefix}}/chat/completions/sync
+Content-Type: application/json
+
+{
+  "messages": [
+    {
+      "role": "user",
+      "content": "Quick test 2"
+    }
+  ],
+  "session_id": "concurrent-session-2",
+  "show_thinking": false,
+  "temperature": 0.5
+}
+
+###############################################################################
+# Notes:
+###############################################################################
+# 
+# Key Features to Test:
+# 1. show_thinking: true/false - Controls GPT-5.2's reasoning visibility
+# 2. stream: true/false - Controls streaming vs synchronous responses
+# 3. temperature: 0.0-2.0 - Controls randomness/creativity
+# 4. session_id - For conversation persistence and history
+# 5. Thinking steps include: step_number, reasoning, confidence, timestamp
+#
+# Expected Response Format (Streaming):
+# - Server-Sent Events (SSE) with "data: " prefix
+# - Chunks with type: "thinking", "content", "done", or "error"
+# - Thinking chunks show reasoning process
+# - Content chunks show actual response
+#
+# Expected Response Format (Sync):
+# - JSON object with complete message
+# - Includes thinking_steps array if show_thinking=true
+# - Includes full content in single response
+#
+###############################################################################

@@ -1,0 +1,33 @@
+{{- if .Values.monitoring.serviceMonitor.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "ai-app.fullname" . }}-backend
+  labels:
+    {{- include "ai-app.backend.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "ai-app.backend.selectorLabels" . | nindent 6 }}
+  endpoints:
+  - port: http
+    path: /metrics
+    interval: {{ .Values.monitoring.serviceMonitor.interval }}
+    scrapeTimeout: {{ .Values.monitoring.serviceMonitor.scrapeTimeout }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "ai-app.fullname" . }}-frontend
+  labels:
+    {{- include "ai-app.frontend.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "ai-app.frontend.selectorLabels" . | nindent 6 }}
+  endpoints:
+  - port: http
+    path: /metrics
+    interval: {{ .Values.monitoring.serviceMonitor.interval }}
+    scrapeTimeout: {{ .Values.monitoring.serviceMonitor.scrapeTimeout }}
+{{- end }}

@@ -1,0 +1,40 @@
+# Development Environment Configuration
+# Copy this file to dev.tfvars and fill in your values
+# DO NOT commit dev.tfvars to version control
+
+# General
+environment     = "dev"
+location        = "southeastasia"
+subscription_id = "00000000-0000-0000-0000-000000000000"  # Add your subscription ID
+tenant_id       = "00000000-0000-0000-0000-000000000000"  # Add your tenant ID
+resource_suffix = "your-unique-suffix-001"                 # Will create: aks-dev-southeastasia-001, vnet-dev-southeastasia-001, etc.
+
+# Tags
+tags = {
+  Environment = "Development"
+  ManagedBy   = "Terraform"
+  Project     = "AKS-AI-App"
+  CostCenter  = "Engineering"
+}
+
+# AKS Configuration
+aks_node_count         = 2
+aks_node_size          = "Standard_D4ads_v5"
+enable_autoscaling     = true
+min_node_count         = 2
+max_node_count         = 5
+kubernetes_version     = "1.32"
+enable_private_cluster = false
+
+# Azure AI Services
+ai_services_sku_name = "S0"
+
+# Azure AI Search
+ai_search_sku = "basic"
+
+# Cosmos DB
+cosmosdb_enable_free_tier = true
+cosmosdb_enable_serverless = false
+
+# Network
+vnet_address_space = ["10.0.0.0/16"]

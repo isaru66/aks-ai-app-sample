@@ -1,0 +1,37 @@
+.PHONY: help
+.DEFAULT_GOAL := help
+
+ENV ?= dev
+TERRAFORM_DIR := infra/terraform/environments/$(ENV)
+HELM_CHART := infra/helm/ai-app
+
+help: ## Show help
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
+
+setup-dev: ## Setup development environment
+	./scripts/setup-env.sh dev
+
+backend-test: ## Run backend tests
+	cd backend && pytest -v --cov=app
+
+frontend-test: ## Run frontend tests
+	cd frontend && npm test
+
+terraform-apply: ## Apply Terraform
+	cd $(TERRAFORM_DIR) && terraform apply -var-file=$(ENV).tfvars
+
+helm-install: ## Install Helm chart
+	helm install ai-app $(HELM_CHART) --namespace ai-app-$(ENV) \
+		--values $(HELM_CHART)/values.yaml \
+		--values $(HELM_CHART)/environments/$(ENV)-values.yaml
+
+deploy-all: terraform-apply helm-install ## Deploy everything
+
+docker-up: ## Start with docker-compose
+	docker-compose up -d
+
+test-all: backend-test frontend-test ## Run all tests
+
+clean: ## Clean artifacts
+	find . -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+	find . -name "node_modules" -exec rm -rf {} + 2>/dev/null || true

@@ -1,0 +1,178 @@
+name: Backend CI/CD
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend.yml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'backend/**'
+
+jobs:
+  test:
+    name: Test Backend
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+    
+    - name: Install dependencies
+      run: |
+        pip install -r requirements.txt
+        pip install -r requirements-dev.txt
+      working-directory: backend
+    
+    - name: Run linters
+      run: |
+        flake8 app/
+        mypy app/
+      working-directory: backend
+    
+    - name: Run tests
+      run: pytest -v --cov=app --cov-report=xml
+      working-directory: backend
+    
+    - name: Upload coverage
+      uses: codecov/codecov-action@v3
+      with:
+        files: backend/coverage.xml
+        flags: backend
+
+  build:
+    name: Build and Push Docker Image
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+    
+    - name: Get ACR name
+      id: acr
+      run: |
+        if [ "${{ github.ref }}" == "refs/heads/main" ]; then
+          echo "name=acrprod001" >> $GITHUB_OUTPUT
+        else
+          echo "name=acrdev001" >> $GITHUB_OUTPUT
+        fi
+    
+    - name: ACR Login
+      run: az acr login --name ${{ steps.acr.outputs.name }}
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    
+    - name: Build and push
+      uses: docker/build-push-action@v5
+      with:
+        context: backend
+        push: true
+        tags: |
+          ${{ steps.acr.outputs.name }}.azurecr.io/backend:latest
+          ${{ steps.acr.outputs.name }}.azurecr.io/backend:${{ github.sha }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+    
+    - name: Scan image
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: ${{ steps.acr.outputs.name }}.azurecr.io/backend:${{ github.sha }}
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+    
+    - name: Upload scan results
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+  deploy-dev:
+    name: Deploy to Development
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/develop'
+    environment: development
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+    
+    - name: Get AKS credentials
+      run: |
+        az aks get-credentials \
+          --resource-group rg-dev-001 \
+          --name aks-dev-001 \
+          --overwrite-existing
+    
+    - name: Helm upgrade
+      run: |
+        helm upgrade ai-app ./infra/helm/ai-app \
+          --install \
+          --namespace ai-app-dev \
+          --values ./infra/helm/ai-app/values.yaml \
+          --values ./infra/helm/ai-app/environments/dev-values.yaml \
+          --set backend.image.tag=${{ github.sha }} \
+          --wait \
+          --timeout 10m
+
+  deploy-prod:
+    name: Deploy to Production
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+    
+    - name: Get AKS credentials
+      run: |
+        az aks get-credentials \
+          --resource-group rg-prod-001 \
+          --name aks-prod-001 \
+          --overwrite-existing
+    
+    - name: Helm upgrade
+      run: |
+        helm upgrade ai-app ./infra/helm/ai-app \
+          --install \
+          --namespace ai-app-prod \
+          --values ./infra/helm/ai-app/values.yaml \
+          --values ./infra/helm/ai-app/environments/prod-values.yaml \
+          --set backend.image.tag=${{ github.sha }} \
+          --wait \
+          --timeout 10m
+    
+    - name: Smoke tests
+      run: |
+        GATEWAY_IP=$(kubectl get gateway ai-app-gateway -n ai-app-prod \
+          -o jsonpath='{.status.addresses[0].value}')
+        
+        curl -f -H "Host: ai-app.example.com" \
+          http://$GATEWAY_IP/api/v1/health/ || exit 1

@@ -1,0 +1,50 @@
+{{- if .Values.gateway.enabled }}
+{{- range .Values.gateway.routes }}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ include "ai-app.fullname" $ }}-{{ .name }}
+  labels:
+    {{- include "ai-app.labels" $ | nindent 4 }}
+spec:
+  parentRefs:
+  - name: {{ include "ai-app.fullname" $ }}-gateway
+    {{- if $.Values.gateway.tls.enabled }}
+    sectionName: https
+    {{- else }}
+    sectionName: http
+    {{- end }}
+  hostnames:
+  {{- range .hostnames }}
+  - {{ . | quote }}
+  {{- end }}
+  rules:
+  {{- range .rules }}
+  - matches:
+    - path:
+        type: {{ .pathType }}
+        value: {{ .path }}
+    backendRefs:
+    - name: {{ include "ai-app.fullname" $ }}-{{ .backend }}
+      port: {{ .port }}
+      weight: 1
+    {{- if eq .backend "backend" }}
+    filters:
+    - type: RequestHeaderModifier
+      requestHeaderModifier:
+        set:
+        - name: X-Forwarded-Proto
+          value: https
+        - name: X-Real-IP
+          value: "%DOWNSTREAM_REMOTE_ADDRESS_WITHOUT_PORT%"
+    {{- end }}
+    {{- if eq .path "/api" }}
+    # SSE streaming support for /api/v1/chat/completions
+    timeouts:
+      request: 300s  # 5 minutes for long-running streams
+      backendRequest: 300s
+    {{- end }}
+  {{- end }}
+{{- end }}
+{{- end }}

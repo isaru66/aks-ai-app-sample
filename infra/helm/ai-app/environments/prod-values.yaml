@@ -1,0 +1,11 @@
+# Production environment
+global:
+  environment: production
+backend:
+  replicaCount: 5
+  image:
+    tag: "1.0.0"
+frontend:
+  replicaCount: 10
+  image:
+    tag: "1.0.0"

@@ -1,0 +1,253 @@
+# Default values for ai-app
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# Global settings
+global:
+  environment: dev
+  resourceSuffix: dev-001
+  domain: example.com
+
+# Backend configuration
+backend:
+  name: backend
+  replicaCount: 2
+  
+  image:
+    repository: acrdev001.azurecr.io/backend
+    pullPolicy: IfNotPresent
+    tag: "latest"
+  
+  service:
+    type: ClusterIP
+    port: 8000
+    targetPort: 8000
+  
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 2000m
+      memory: 4Gi
+  
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+  
+  env:
+    - name: ENVIRONMENT
+      value: "dev"
+    - name: LOG_LEVEL
+      value: "INFO"
+    - name: ENABLE_STREAMING
+      value: "true"
+    - name: ENABLE_THINKING_PROCESS
+      value: "true"
+  
+  # Azure OpenAI configuration (from secrets)
+  secrets:
+    azureOpenAI:
+      endpoint: "https://openai-dev-001.openai.azure.com/"
+      apiKey: ""  # Set via --set or external secrets
+      deploymentName: "gpt-52-deployment"
+      model: "gpt-5.2"
+    
+    cosmosDB:
+      endpoint: "https://cosmos-dev-001.documents.azure.com:443/"
+      key: ""  # Set via --set or external secrets
+    
+    search:
+      endpoint: "https://search-dev-001.search.windows.net"
+      apiKey: ""  # Set via --set or external secrets
+  
+  livenessProbe:
+    httpGet:
+      path: /api/v1/health/live
+      port: 8000
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  
+  readinessProbe:
+    httpGet:
+      path: /api/v1/health/ready
+      port: 8000
+    initialDelaySeconds: 20
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+# Frontend configuration
+frontend:
+  name: frontend
+  replicaCount: 3
+  
+  image:
+    repository: acrdev001.azurecr.io/frontend
+    pullPolicy: IfNotPresent
+    tag: "latest"
+  
+  service:
+    type: ClusterIP
+    port: 3000
+    targetPort: 3000
+  
+  resources:
+    requests:
+      cpu: 200m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+  
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 20
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+  
+  env:
+    - name: NEXT_PUBLIC_API_URL
+      value: "http://backend:8000"
+    - name: NODE_ENV
+      value: "production"
+  
+  livenessProbe:
+    httpGet:
+      path: /api/health
+      port: 3000
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  
+  readinessProbe:
+    httpGet:
+      path: /api/health
+      port: 3000
+    initialDelaySeconds: 20
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+# Envoy Gateway configuration
+gateway:
+  enabled: true
+  className: envoy
+  
+  # HTTPRoute configuration
+  routes:
+    - name: frontend
+      hostnames:
+        - "ai-app-dev.example.com"
+      rules:
+        - path: /
+          pathType: PathPrefix
+          backend: frontend
+          port: 3000
+    
+    - name: backend-api
+      hostnames:
+        - "ai-app-dev.example.com"
+      rules:
+        - path: /api
+          pathType: PathPrefix
+          backend: backend
+          port: 8000
+  
+  # TLS configuration
+  tls:
+    enabled: true
+    secretName: ai-app-tls
+    hosts:
+      - "ai-app-dev.example.com"
+
+# Service Account
+serviceAccount:
+  create: true
+  annotations:
+    azure.workload.identity/client-id: ""  # Set for workload identity
+  name: ai-app
+
+# Pod Security
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: false
+
+# Network Policy
+networkPolicy:
+  enabled: true
+  policyTypes:
+    - Ingress
+    - Egress
+
+# Pod Disruption Budget
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# Monitoring
+monitoring:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+    interval: 30s
+    scrapeTimeout: 10s
+
+# Azure specific
+azure:
+  # Workload Identity
+  workloadIdentity:
+    enabled: true
+    clientId: ""  # Set via --set
+  
+  # Application Insights
+  applicationInsights:
+    enabled: true
+    connectionString: ""  # Set via --set or external secrets
+  
+  # Key Vault
+  keyVault:
+    enabled: true
+    name: "kv-dev-001"
+    tenantId: ""  # Set via --set
+
+# Image pull secrets
+imagePullSecrets:
+  - name: acr-secret
+
+# Node selector
+nodeSelector: {}
+
+# Tolerations
+tolerations: []
+
+# Affinity
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - ai-app
+          topologyKey: kubernetes.io/hostname
