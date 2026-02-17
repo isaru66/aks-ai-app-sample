@@ -25,20 +25,13 @@ graph TD
     subgraph Envoy["Envoy Gateway API"]
         GW[Gateway]
         HTTP[HTTPRoute]
-        TLS[TLSRoute]
     end
     
     subgraph K8s["Kubernetes Cluster (Internal)"]
-        subgraph Frontend["Frontend (Next.js 16)<br/>Backend-for-Frontend"]
-            FE1[Chat UI]
-            FE2[API Routes - Proxy]
-            FE3[SSE Streaming]
+        subgraph Frontend["Frontend (Next.js 16) + BFF"]
         end
         
-        subgraph Backend["Backend (FastAPI)<br/>Internal Service"]
-            BE1[GPT-5.2 API]
-            BE2[LangGraph]
-            BE3[Streaming]
+        subgraph Backend["Backend (FastAPI)"]
         end
     end
     
@@ -53,8 +46,8 @@ graph TD
     Backend --> PostgreSQL
     Backend --> Storage
     
-    style Backend fill:#f9f,stroke:#333,stroke-dasharray: 5 5
-    style Frontend fill:#bbf,stroke:#333
+    style Backend fill:#3776AB,stroke:#333,stroke-dasharray: 5 5,color:#fff
+    style Frontend fill:#3776AB,stroke:#333,stroke-dasharray: 5 5,color:#fff
 ```
 
 ## 🏗️ Tech Stack
