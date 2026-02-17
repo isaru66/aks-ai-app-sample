@@ -88,6 +88,14 @@ export async function* streamChat(
         }
       }
     }
+  } catch (error: any) {
+    // Check if this is an abort error (user clicked stop)
+    if (error.name === 'AbortError' || error instanceof DOMException) {
+      // Gracefully handle abort - this is expected behavior
+      return
+    }
+    // Re-throw other errors
+    throw error
   } finally {
     reader.releaseLock()
   }
@@ -159,6 +167,14 @@ export async function* streamRAGQuery(
         }
       }
     }
+  } catch (error: any) {
+    // Check if this is an abort error (user clicked stop)
+    if (error.name === 'AbortError' || error instanceof DOMException) {
+      // Gracefully handle abort - this is expected behavior
+      return
+    }
+    // Re-throw other errors
+    throw error
   } finally {
     reader.releaseLock()
   }
