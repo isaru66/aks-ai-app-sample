@@ -13,7 +13,7 @@ A  Azure OpenAI application with **GPT-5.2** streaming chat and visible thinking
 - **FastAPI + LangGraph**: High-performance backend with AI workflow orchestration
 - **Azure AI Foundry**: Unified AI platform for model management and deployment
 - **Envoy Gateway API**: Modern Kubernetes-native traffic management
-- **Terraform Workspaces**: Infrastructure as Code for multiple environments
+- **Terraform Workspaces**: Infrastructure as Code for multiple environments _(work in progress)_
 - **Helm Charts**: Kubernetes deployment automation
 
 ## 📋 Architecture
@@ -146,6 +146,8 @@ nano .env
 
 ### 3. Deploy Infrastructure (Dev Environment)
 
+> ⚠️ **Note**: Terraform infrastructure is currently a work in progress.
+
 ```bash
 # Navigate to Terraform directory
 cd infra/terraform
@@ -248,6 +250,8 @@ kubectl get gateway ai-app-gateway -n dev -o jsonpath='{.status.addresses[0].val
 ## 🔧 Configuration
 
 ### Terraform Workspaces
+
+> ⚠️ **Note**: Terraform infrastructure is currently a work in progress.
 
 The project uses Terraform workspaces for environment management:
 
@@ -373,12 +377,7 @@ For issues and questions:
 
 ## 🎯 Roadmap
 
-- [ ] Multi-modal support (images, audio)
-- [ ] Advanced RAG with hybrid search
-- [ ] Multi-agent orchestration
-- [ ] Fine-tuned GPT-5.2 models
-- [ ] Voice chat integration
-- [ ] Mobile application
+- [ ] Testing Terraform
 
 ---
 
