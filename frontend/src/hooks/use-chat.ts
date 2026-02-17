@@ -74,9 +74,7 @@ export function useChat(options: UseChatOptions = {}) {
         for await (const chunk of streamChat([...messages, userMessage], {
           onThinking: (step) => {
             const thinkingStep: ThinkingStep = {
-              step_number: step.metadata?.step_number || thinkingStepsRef.current.length + 1,
               reasoning: step.content,
-              confidence: step.metadata?.confidence || 0.9,
               timestamp: step.timestamp,
               metadata: step.metadata,
             }
@@ -137,7 +135,13 @@ export function useChat(options: UseChatOptions = {}) {
         })) {
           // Stream is being processed through callbacks
         }
-      } catch (error) {
+      } catch (error: any) {
+        // Ignore abort errors - this is expected when user clicks stop
+        if (error.name === 'AbortError' || error instanceof DOMException) {
+          console.log('Stream aborted by user')
+          return
+        }
+        
         console.error('Error in sendMessage:', error)
         setIsStreaming(false)
         setCurrentThinkingSteps([])

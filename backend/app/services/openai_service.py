@@ -109,8 +109,7 @@ class OpenAIService:
                     step_number += 1
                     yield StreamChunk(
                         type=StreamChunkType.THINKING,
-                        content=event.delta,
-                        metadata={"step_number": step_number}
+                        content=event.delta
                     )
 
                 # Output text tokens

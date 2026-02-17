@@ -31,9 +31,7 @@ export function useRAG(options: UseRAGOptions = {}) {
         for await (const chunk of streamRAGQuery(queryText, {
           onThinking: (step) => {
             const thinkingStep: ThinkingStep = {
-              step_number: step.metadata?.step_number || steps.length + 1,
               reasoning: step.content,
-              confidence: step.metadata?.confidence || 0.9,
               timestamp: step.timestamp,
               metadata: step.metadata,
             }
@@ -62,7 +60,14 @@ export function useRAG(options: UseRAGOptions = {}) {
         })) {
           // Processing through callbacks
         }
-      } catch (error) {
+      } catch (error: any) {
+        // Ignore abort errors - this is expected when user clicks stop
+        if (error.name === 'AbortError' || error instanceof DOMException) {
+          console.log('RAG query aborted by user')
+          setIsQuerying(false)
+          return
+        }
+        
         console.error('RAG query error:', error)
         setIsQuerying(false)
         options.onError?.(error instanceof Error ? error.message : 'Unknown error')

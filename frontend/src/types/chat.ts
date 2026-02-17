@@ -14,9 +14,7 @@ export enum StreamChunkType {
 }
 
 export interface ThinkingStep {
-  step_number: number
   reasoning: string
-  confidence: number
   timestamp: string
   metadata?: Record<string, any>
 }

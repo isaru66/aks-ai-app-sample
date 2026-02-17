@@ -21,9 +21,7 @@ class StreamChunkType(str, Enum):
 
 class ThinkingStep(BaseModel):
     """Model for GPT-5.2 thinking/reasoning steps."""
-    step_number: int = Field(..., description="Sequential step number")
     reasoning: str = Field(..., description="Reasoning text for this step")
-    confidence: float = Field(default=0.0, ge=0.0, le=1.0, description="Confidence score (0-1)")
     timestamp: datetime = Field(default_factory=datetime.utcnow, description="Step timestamp")
     metadata: Optional[Dict[str, Any]] = Field(default=None, description="Additional metadata")
 
