@@ -8,6 +8,18 @@ global:
   resourceSuffix: dev-001
   domain: example.com
 
+# Database migrations
+migrations:
+  enabled: true  # Run migrations as Helm pre-install/pre-upgrade job
+  # When false, migrations must be run manually or via entrypoint
+
+# PostgreSQL connection (for migration job)
+postgresql:
+  host: "postgres"
+  port: 5432
+  database: "chatdb"
+  # Credentials stored in secrets
+
 # Backend configuration
 backend:
   name: backend
@@ -113,8 +125,7 @@ frontend:
     targetMemoryUtilizationPercentage: 80
   
   env:
-    - name: NEXT_PUBLIC_API_URL
-      value: "http://backend:8000"
+    # BACKEND_SERVICE_URL is automatically injected in deployment template
     - name: NODE_ENV
       value: "production"
   
@@ -142,6 +153,7 @@ gateway:
   className: envoy
   
   # HTTPRoute configuration
+  # Only frontend is exposed - backend is internal-only via cluster DNS
   routes:
     - name: frontend
       hostnames:
@@ -151,15 +163,6 @@ gateway:
           pathType: PathPrefix
           backend: frontend
           port: 3000
-    
-    - name: backend-api
-      hostnames:
-        - "ai-app-dev.example.com"
-      rules:
-        - path: /api
-          pathType: PathPrefix
-          backend: backend
-          port: 8000
   
   # TLS configuration
   tls:

@@ -20,8 +20,8 @@ export async function* streamChat(
   signal?: AbortSignal,
   params: StreamChatParams = {},
 ): AsyncGenerator<StreamChunk> {
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
-  const url = `${API_URL}/api/v1/chat/completions`
+  // Use relative URL - proxied through Next.js API route
+  const url = '/api/v1/chat/completions'
 
   const response = await fetch(url, {
     method: 'POST',
@@ -97,8 +97,8 @@ export async function* streamRAGQuery(
   query: string,
   options: StreamOptions = {}
 ): AsyncGenerator<StreamChunk> {
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
-  const url = `${API_URL}/api/v1/rag/query`
+  // Use relative URL - proxied through Next.js API route
+  const url = '/api/v1/rag/query'
 
   const response = await fetch(url, {
     method: 'POST',

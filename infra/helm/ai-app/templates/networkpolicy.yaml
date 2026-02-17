@@ -12,15 +12,7 @@ spec:
   policyTypes:
   {{- toYaml .Values.networkPolicy.policyTypes | nindent 2 }}
   ingress:
-  # Allow from Envoy Gateway
-  - from:
-    - namespaceSelector:
-        matchLabels:
-          kubernetes.io/metadata.name: envoy-gateway-system
-    ports:
-    - protocol: TCP
-      port: 8000
-  # Allow from frontend
+  # Backend is internal-only: allow traffic ONLY from frontend pods
   - from:
     - podSelector:
         matchLabels:

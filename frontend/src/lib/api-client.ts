@@ -1,13 +1,14 @@
 import axios, { AxiosInstance } from 'axios'
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+// Use relative URLs - requests are proxied through Next.js API routes to backend
+const API_BASE_URL = '/api/v1'
 
 class APIClient {
   private client: AxiosInstance
 
   constructor() {
     this.client = axios.create({
-      baseURL: `${API_BASE_URL}/api/v1`,
+      baseURL: API_BASE_URL,
       headers: {
         'Content-Type': 'application/json',
       },
@@ -77,9 +78,9 @@ class APIClient {
     return response.data
   }
 
-  // Get the base URL for SSE streaming
+  // Get the base URL for SSE streaming (now uses relative URL)
   getStreamURL(endpoint: string): string {
-    return `${API_BASE_URL}/api/v1${endpoint}`
+    return `${API_BASE_URL}${endpoint}`
   }
 }
 

@@ -37,6 +37,9 @@ spec:
           containerPort: {{ .Values.backend.service.targetPort }}
           protocol: TCP
         env:
+        # Disable auto-migration in Kubernetes (handled by migration Job)
+        - name: AUTO_MIGRATE
+          value: "false"
         {{- range .Values.backend.env }}
         - name: {{ .name }}
           value: {{ .value | quote }}

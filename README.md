@@ -8,6 +8,7 @@ A  Azure OpenAI application with **GPT-5.2** streaming chat and visible thinking
 
 - **GPT-5.2 Streaming**: Real-time streaming responses with visible reasoning steps
 - **Thinking Process Visualization**: See how GPT-5.2 thinks step-by-step
+- **Backend-for-Frontend (BFF)**: Secure architecture with internal-only backend API
 - **Next.js 16**: Modern frontend with Turbopack for blazing-fast builds
 - **FastAPI + LangGraph**: High-performance backend with AI workflow orchestration
 - **Azure AI Foundry**: Unified AI platform for model management and deployment
@@ -17,33 +18,43 @@ A  Azure OpenAI application with **GPT-5.2** streaming chat and visible thinking
 
 ## 📋 Architecture
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                     Azure Load Balancer                      │
-└─────────────────────┬───────────────────────────────────────┘
-                      │
-┌─────────────────────▼───────────────────────────────────────┐
-│                    Envoy Gateway API                         │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐     │
-│  │  Gateway     │  │  HTTPRoute   │  │  TLSRoute    │     │
-│  └──────────────┘  └──────────────┘  └──────────────┘     │
-└──────────────┬──────────────────────────┬──────────────────┘
-               │                          │
-       ┌───────▼────────┐        ┌────────▼────────┐
-       │   Frontend     │        │    Backend       │
-       │   (Next.js 16) │        │  (FastAPI)       │
-       │   - Chat UI    │        │  - GPT-5.2 API   │
-       │   - Streaming  │        │  - LangGraph     │
-       │   - Thinking   │        │  - Streaming     │
-       └────────────────┘        └──────┬───────────┘
-                                        │
-                        ┌───────────────┼───────────────┐
-                        │               │               │
-                  ┌─────▼─────┐  ┌─────▼──────┐  ┌────▼────┐
-                  │ Azure AI  │  │  Cosmos DB │  │ Storage │
-                  │ Foundry   │  │            │  │ Account │
-                  │ (GPT-5.2) │  │            │  │         │
-                  └───────────┘  └────────────┘  └─────────┘
+```mermaid
+graph TD
+    ALB[Azure Load Balancer]
+    
+    subgraph Envoy["Envoy Gateway API"]
+        GW[Gateway]
+        HTTP[HTTPRoute]
+        TLS[TLSRoute]
+    end
+    
+    subgraph K8s["Kubernetes Cluster (Internal)"]
+        subgraph Frontend["Frontend (Next.js 16)<br/>Backend-for-Frontend"]
+            FE1[Chat UI]
+            FE2[API Routes - Proxy]
+            FE3[SSE Streaming]
+        end
+        
+        subgraph Backend["Backend (FastAPI)<br/>Internal Service"]
+            BE1[GPT-5.2 API]
+            BE2[LangGraph]
+            BE3[Streaming]
+        end
+    end
+    
+    Foundry[Azure AI Foundry<br/>GPT-5.2]
+    PostgreSQL[(PostgreSQL)]
+    Storage[(Storage Account)]
+    
+    ALB --> Envoy
+    Envoy -->|Public| Frontend
+    Frontend -->|Cluster DNS| Backend
+    Backend --> Foundry
+    Backend --> PostgreSQL
+    Backend --> Storage
+    
+    style Backend fill:#f9f,stroke:#333,stroke-dasharray: 5 5
+    style Frontend fill:#bbf,stroke:#333
 ```
 
 ## 🏗️ Tech Stack
@@ -127,7 +138,7 @@ aks-ai-app/
 
 ```bash
 git clone <repository-url>
-cd aks-ai-app
+cd aks-ai-app-sample
 ```
 
 ### 2. Configure Environment
@@ -236,9 +247,9 @@ npm run dev
 # Get Gateway IP address
 kubectl get gateway ai-app-gateway -n dev -o jsonpath='{.status.addresses[0].value}'
 
-# Access application
+# Access application (frontend only - backend is internal)
 # Frontend: http://<gateway-ip>
-# Backend API: http://<gateway-ip>/api
+# API calls are proxied through frontend to internal backend service
 ```
 
 ## 🔧 Configuration
@@ -332,9 +343,11 @@ helm upgrade ai-app ./infra/helm/ai-app \
 
 ## 🔐 Security
 
+- **Backend-for-Frontend (BFF) Pattern** - Backend API is internal-only, never exposed to internet
 - **Managed Identity** for Azure service authentication
 - **Key Vault** for secrets management
 - **Private Endpoints** for network isolation
+- **Network Policies** - Backend only accepts traffic from frontend pods
 - **RBAC** for fine-grained access control
 - **Content Safety** for AI response filtering
 - **Rate Limiting** via Envoy Gateway policies
