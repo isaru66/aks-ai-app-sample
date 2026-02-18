@@ -27,13 +27,13 @@ services:
       - ENABLE_STREAMING=true
       - ENABLE_THINKING_PROCESS=true
       - CORS_ORIGINS=http://localhost:3000
-      - DATABASE_TYPE=postgresql
-      - POSTGRESQL_HOST=postgres
-      - POSTGRESQL_PORT=5432
-      - POSTGRESQL_DATABASE=chatdb
-      - POSTGRESQL_USER=chatapp
-      - POSTGRESQL_PASSWORD=devpassword
-      - POSTGRESQL_SSL_MODE=disable
+      - DATABASE_TYPE=${DATABASE_TYPE}
+      - POSTGRESQL_HOST=${POSTGRESQL_HOST}
+      - POSTGRESQL_PORT=${POSTGRESQL_PORT}
+      - POSTGRESQL_DATABASE=${POSTGRESQL_DATABASE}
+      - POSTGRESQL_USER=${POSTGRESQL_USER}
+      - POSTGRESQL_PASSWORD=${POSTGRESQL_PASSWORD}
+      - POSTGRESQL_SSL_MODE=${POSTGRESQL_SSL_MODE}
     volumes:
       - ./backend:/app
     depends_on:
