@@ -7,7 +7,12 @@ import { useChat } from '@/hooks/use-chat'
 import { useMCPServers } from '@/hooks/use-mcp-servers'
 import { Settings, Trash2, ChevronDown } from 'lucide-react'
 import { useState } from 'react'
-import type { ReasoningEffort, Verbosity } from '@/types/chat'
+import type { ReasoningEffort, Verbosity, ModelId } from '@/types/chat'
+
+const MODEL_OPTIONS: { value: ModelId; label: string; description: string }[] = [
+  { value: 'gpt-5.2', label: 'GPT-5.2', description: 'Full reasoning model' },
+  { value: 'gpt-5-mini', label: 'GPT-5 mini', description: 'Fast & lightweight' },
+]
 
 const EFFORT_OPTIONS: { value: ReasoningEffort; label: string; description: string }[] = [
   { value: 'none', label: 'None', description: 'No reasoning' },
@@ -38,6 +43,8 @@ export function ChatInterface() {
     setReasoningEffort,
     verbosity,
     setVerbosity,
+    model,
+    setModel,
     sendMessage,
     stopStreaming,
     clearMessages,
@@ -120,7 +127,34 @@ export function ChatInterface() {
         {/* Settings Panel */}
         {showSettings && (
           <div className="mx-auto max-w-4xl mt-3 p-3 rounded-lg border bg-muted/30 space-y-3">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              {/* Model Selection */}
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">
+                  Model
+                </label>
+                <div className="relative">
+                  <select
+                    value={model}
+                    onChange={(e) => setModel(e.target.value as ModelId)}
+                    disabled={isStreaming}
+                    className="
+                      w-full appearance-none rounded-md border border-input bg-background
+                      px-3 py-1.5 text-sm pr-8
+                      focus:outline-none focus:ring-2 focus:ring-ring
+                      disabled:opacity-50 disabled:cursor-not-allowed
+                    "
+                  >
+                    {MODEL_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label} — {opt.description}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+                </div>
+              </div>
+
               {/* Thinking Level (Reasoning Effort) */}
               <div className="space-y-1">
                 <label className="text-xs font-medium text-muted-foreground">
@@ -201,6 +235,8 @@ export function ChatInterface() {
 
             {/* Current config summary */}
             <div className="text-[11px] text-muted-foreground text-center pt-1 border-t">
+              model: <span className="font-mono font-medium text-foreground">{model}</span>
+              {' · '}
               effort: <span className="font-mono font-medium text-foreground">{reasoningEffort}</span>
               {' · '}
               verbosity: <span className="font-mono font-medium text-foreground">{verbosity}</span>

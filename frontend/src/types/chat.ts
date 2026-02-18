@@ -36,6 +36,7 @@ export interface StreamChunk {
 
 export type ReasoningEffort = 'none' | 'minimal' | 'low' | 'medium' | 'high'
 export type Verbosity = 'low' | 'medium' | 'high'
+export type ModelId = 'gpt-5.2' | 'gpt-5-mini'
 
 export interface MCPServerPayload {
   url: string
@@ -52,6 +53,8 @@ export interface ChatRequest {
   reasoning_effort?: ReasoningEffort
   verbosity?: Verbosity
   max_tokens?: number
+  /** Model deployment to use */
+  model?: ModelId
   /** Active MCP servers for tool calling */
   mcp_servers?: MCPServerPayload[]
 }

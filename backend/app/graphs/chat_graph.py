@@ -88,6 +88,7 @@ class ChatGraph:
         verbosity: str = "medium",
         max_tokens: int = 16000,
         mcp_servers: Optional[List[MCPServerConfig]] = None,
+        model_id: str = "gpt-5.2",
     ) -> AsyncGenerator[StreamChunk, None]:
         """
         Stream chat response with thinking visualization.
@@ -104,7 +105,7 @@ class ChatGraph:
             StreamChunk: Thinking and content chunks
         """
         logger.info(
-            f"Starting chat stream (effort={reasoning_effort}, verbosity={verbosity}, "
+            f"Starting chat stream (model={model_id}, effort={reasoning_effort}, verbosity={verbosity}, "
             f"mcp_servers={len(mcp_servers) if mcp_servers else 0})"
         )
 
@@ -145,6 +146,7 @@ class ChatGraph:
                 max_completion_tokens=max_tokens,
                 tools=tools,
                 tool_executor=tool_executor,
+                model_id=model_id,
             ):
                 yield chunk
         finally:

@@ -88,6 +88,7 @@ async def chat_stream_generator(
             verbosity=request.verbosity.value,
             max_tokens=request.max_tokens or 16000,
             mcp_servers=request.mcp_servers or [],
+            model_id=request.model.value,
         ):
             # Format as SSE — single-pass JSON serialization
             yield f"data: {chunk.model_dump_json()}\n\n"

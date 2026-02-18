@@ -51,10 +51,13 @@ class Settings(BaseSettings):
     # Azure OpenAI (GPT-5.2)
     azure_openai_endpoint: Optional[str] = None
     azure_openai_api_key: Optional[str] = None
-    azure_openai_deployment_name: str = "gpt-52-deployment"
+    azure_openai_deployment_name: str = "gpt-5.2"
     azure_openai_model: str = "gpt-5.2"
     azure_openai_api_version: str = "2025-03-01-preview"
     azure_openai_embedding_deployment: str = "text-embedding-ada-002"
+    # GPT-5-mini deployment (lighter/faster model)
+    azure_openai_mini_deployment_name: str = "gpt-5-mini"
+    azure_openai_mini_model: str = "gpt-5-mini"
     
     # Azure AI Search
     azure_search_endpoint: Optional[str] = None

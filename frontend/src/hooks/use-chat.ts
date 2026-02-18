@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef } from 'react'
 import { streamChat } from '@/lib/stream-client'
 import { useWordBuffer } from '@/hooks/use-word-buffer'
-import type { ChatMessage, ThinkingStep, StreamChunk, MessageRole, ReasoningEffort, Verbosity, MCPServerPayload } from '@/types/chat'
+import type { ChatMessage, ThinkingStep, StreamChunk, MessageRole, ReasoningEffort, Verbosity, MCPServerPayload, ModelId } from '@/types/chat'
 
 export interface UseChatOptions {
   onThinkingStep?: (step: ThinkingStep) => void
@@ -21,6 +21,7 @@ export function useChat(options: UseChatOptions = {}) {
   const [reasoningEffort, setReasoningEffort] = useState<ReasoningEffort>('low')
   const [verbosity, setVerbosity] = useState<Verbosity>('low')
   const [showThinking, setShowThinking] = useState(true)
+  const [model, setModel] = useState<ModelId>('gpt-5.2')
   const abortControllerRef = useRef<AbortController | null>(null)
 
   // Refs for collecting the full raw content (for storage) and thinking steps
@@ -135,6 +136,7 @@ export function useChat(options: UseChatOptions = {}) {
           reasoningEffort,
           verbosity,
           mcpServers: options.mcpServers,
+          model,
         })) {
           // Stream is being processed through callbacks
         }
@@ -152,7 +154,7 @@ export function useChat(options: UseChatOptions = {}) {
         options.onError?.(error instanceof Error ? error.message : 'Unknown error')
       }
     },
-    [messages, isStreaming, options, showThinking, reasoningEffort, verbosity]
+    [messages, isStreaming, options, showThinking, reasoningEffort, verbosity, model]
   )
 
   const stopStreaming = useCallback(() => {
@@ -189,6 +191,8 @@ export function useChat(options: UseChatOptions = {}) {
     setReasoningEffort,
     verbosity,
     setVerbosity,
+    model,
+    setModel,
     sendMessage,
     stopStreaming,
     clearMessages,

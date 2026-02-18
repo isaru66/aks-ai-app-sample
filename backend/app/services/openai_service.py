@@ -28,12 +28,14 @@ class OpenAIService:
             azure_ad_token_provider=token_provider,
             api_version=settings.azure_openai_api_version
         )
-        
+
         self.deployment_name = settings.azure_openai_deployment_name
         self.model = settings.azure_openai_model
-        
+        self.mini_deployment_name = settings.azure_openai_mini_deployment_name
+        self.mini_model = settings.azure_openai_mini_model
+
         logger.info(f"OpenAI Service initialized (Responses API) with managed identity, model: {self.model}")
-        logger.info(f"Endpoint: {azure_endpoint}, API Version: {settings.azure_openai_api_version}")
+        logger.info(f"Mini model: {self.mini_model}, Endpoint: {azure_endpoint}, API Version: {settings.azure_openai_api_version}")
 
     def _messages_to_response_input(
         self, messages: List[Dict[str, str]]
@@ -57,6 +59,12 @@ class OpenAIService:
     # Streaming (Responses API)
     # ------------------------------------------------------------------
 
+    def _resolve_deployment(self, model_id: str) -> str:
+        """Map a model ID string to the correct Azure deployment name."""
+        if model_id == "gpt-5-mini":
+            return self.mini_deployment_name
+        return self.deployment_name
+
     async def stream_chat_with_thinking(
         self,
         messages: List[Dict[str, str]],
@@ -66,6 +74,7 @@ class OpenAIService:
         max_completion_tokens: int = 16000,
         tools: Optional[List[Dict[str, Any]]] = None,
         tool_executor: Optional[Any] = None,
+        model_id: str = "gpt-5.2",
     ) -> AsyncGenerator[StreamChunk, None]:
         """
         Stream responses with visible thinking/reasoning using the Responses API.
@@ -83,10 +92,11 @@ class OpenAIService:
             StreamChunk: Chunks of type 'thinking', 'content', 'done', or 'error'
         """
         try:
+            deployment = self._resolve_deployment(model_id)
             logger.info(
-                f"Starting Responses API stream with thinking={show_thinking}, "
-                f"effort={reasoning_effort}, verbosity={verbosity}, "
-                f"tools={len(tools) if tools else 0}"
+                f"Starting Responses API stream: model={model_id} ({deployment}), "
+                f"thinking={show_thinking}, effort={reasoning_effort}, "
+                f"verbosity={verbosity}, tools={len(tools) if tools else 0}"
             )
 
             input_items = self._messages_to_response_input(messages)
@@ -110,7 +120,7 @@ class OpenAIService:
             max_tool_rounds = 10
             for _round in range(max_tool_rounds):
                 create_kwargs: Dict[str, Any] = dict(
-                    model=self.deployment_name,
+                    model=deployment,
                     input=input_items,
                     stream=True,
                     max_output_tokens=max_completion_tokens,

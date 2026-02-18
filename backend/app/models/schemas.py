@@ -54,6 +54,12 @@ class Verbosity(str, Enum):
     HIGH = "high"
 
 
+class ModelId(str, Enum):
+    """Available Azure OpenAI model deployments."""
+    GPT_52 = "gpt-5.2"
+    GPT_5_MINI = "gpt-5-mini"
+
+
 class MCPTransport(str, Enum):
     """MCP server transport protocol."""
     STREAMABLE_HTTP = "streamable-http"
@@ -86,6 +92,10 @@ class ChatRequest(BaseModel):
         description="Text output verbosity: low, medium, high (GPT-5 series)"
     )
     max_tokens: Optional[int] = Field(default=16000, gt=0, description="Maximum output tokens")
+    model: ModelId = Field(
+        default=ModelId.GPT_52,
+        description="Model deployment to use: gpt-5.2 or gpt-5-mini"
+    )
     mcp_servers: Optional[List[MCPServerConfig]] = Field(
         default=None,
         description="MCP servers to use for tool calling during this request"
