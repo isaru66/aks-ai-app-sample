@@ -121,13 +121,6 @@ async def root():
         "app": settings.app_name,
         "version": "1.0.0",
         "environment": settings.environment,
-        "features": {
-            "streaming": settings.enable_streaming,
-            "thinking_process": settings.enable_thinking_process,
-            "rag": settings.enable_rag,
-            "agents": settings.enable_agents
-        },
-        "model": settings.azure_openai_model,
         "docs": "/docs",
         "health": "/api/v1/health"
     }
