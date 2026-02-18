@@ -1,11 +1,26 @@
 # Production environment
 global:
   environment: production
+
+# Azure PostgreSQL Flexible Server configuration (Production)
+postgresql:
+  # Azure PostgreSQL Flexible Server hostname
+  host: "myserver-prod.postgres.database.azure.com"
+  port: 5432
+  database: "chatdb"
+  # Azure requires SSL/TLS for connections
+  sslMode: "require"
+  auth:
+    # Username format: username@servername
+    username: "chatapp@myserver-prod"
+    password: "" # REQUIRED - provide via Azure Key Vault or --set
+
 backend:
-  replicaCount: 5
+  replicaCount: 3
   image:
-    tag: "1.0.0"
+    tag: "v1.0.0"
+
 frontend:
-  replicaCount: 10
+  replicaCount: 3
   image:
-    tag: "1.0.0"
+    tag: "v1.0.0"

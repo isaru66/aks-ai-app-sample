@@ -1,10 +1,28 @@
 # Dev environment
 global:
   environment: dev
+
+# Azure PostgreSQL Flexible Server configuration
+# Deployment targets external managed PostgreSQL in Azure
+postgresql:
+  # Azure PostgreSQL Flexible Server hostname
+  host: "myserver-dev.postgres.database.azure.com"
+  port: 5432
+  database: "chatdb"
+  # Azure requires SSL/TLS for connections
+  sslMode: "require"
+  auth:
+    # Username format: username@servername
+    username: "chatapp@myserver-dev"
+    password: "" # REQUIRED - provide via --set or external secrets
+    # password: "your-strong-password"
+
 backend:
   replicaCount: 2
+
 frontend:
   replicaCount: 2
+
 gateway:
   tls:
     enabled: false

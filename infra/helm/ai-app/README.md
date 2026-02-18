@@ -53,6 +53,7 @@ helm install ai-app . \
   --namespace ai-app-dev \
   --values values.yaml \
   --values environments/dev-values.yaml \
+  --set postgresql.auth.password='<your-postgres-password>' \
   --set backend.secrets.azureOpenAI.apiKey=<your-api-key> \
   --set backend.secrets.cosmosDB.key=<your-cosmos-key> \
   --set backend.secrets.search.apiKey=<your-search-key>
@@ -65,9 +66,113 @@ helm install ai-app . \
   --namespace ai-app-prod \
   --values values.yaml \
   --values environments/prod-values.yaml \
+  --set postgresql.auth.password='<your-postgres-password>' \
   --set backend.secrets.azureOpenAI.apiKey=<your-api-key> \
   --set backend.secrets.cosmosDB.key=<your-cosmos-key> \
   --set backend.secrets.search.apiKey=<your-search-key>
+```
+
+## PostgreSQL Configuration
+
+This chart is configured to connect to **Azure PostgreSQL Flexible Server** running outside of AKS (recommended for production).
+
+### Prerequisites
+
+1. Create Azure PostgreSQL Flexible Server:
+
+```bash
+az postgres flexible-server create \
+  --resource-group myResourceGroup \
+  --name myserver-dev \
+  --location eastus \
+  --admin-user chatapp \
+  --admin-password '<strong-password>' \
+  --database-name chatdb \
+  --sku-name Standard_B1ms \
+  --tier Burstable
+```
+
+2. Configure Firewall/Virtual Network:
+
+```bash
+# Allow AKS cluster virtual network
+az postgres flexible-server firewall-rule create \
+  --resource-group myResourceGroup \
+  --name myserver-dev \
+  --rule-name allow-aks \
+  --start-ip-address <AKS-VNET-CIDR> \
+  --end-ip-address <AKS-VNET-CIDR>
+```
+
+3. Enable SSL/TLS (required for Azure PostgreSQL):
+
+Azure PostgreSQL Flexible Server **requires SSL/TLS** for connections (sslMode=require).
+
+### Configuration
+
+Update your environment values file (e.g., `environments/dev-values.yaml`):
+
+```yaml
+postgresql:
+  # Azure PostgreSQL Flexible Server FQDN
+  host: "myserver-dev.postgres.database.azure.com"
+  port: 5432
+  database: "chatdb"
+  sslMode: "require"  # Required for Azure PostgreSQL
+  auth:
+    # Format: username@servername (for Azure PostgreSQL)
+    username: "chatapp@myserver-dev"
+    password: ""  # Provide via --set or secrets
+```
+
+Or via Helm CLI:
+
+```bash
+helm install ai-app . \
+  --values values.yaml \
+  --values environments/dev-values.yaml \
+  --set postgresql.host='myserver-dev.postgres.database.azure.com' \
+  --set postgresql.auth.username='chatapp@myserver-dev' \
+  --set postgresql.auth.password='your-password'
+```
+
+### Using Azure Key Vault for Credentials (Recommended)
+
+For production, use Azure Key Vault:
+
+```bash
+# Store password in Key Vault
+az keyvault secret set \
+  --vault-name myKeyVault \
+  --name postgres-password \
+  --value '<your-password>'
+
+# Get secret value
+PASSWORD=$(az keyvault secret show \
+  --vault-name myKeyVault \
+  --name postgres-password \
+  --query value -o tsv)
+
+# Install with secret from Key Vault
+helm install ai-app . \
+  --values environments/prod-values.yaml \
+  --set postgresql.auth.password="$PASSWORD"
+```
+
+### Database Initialization
+
+The chart runs Alembic migrations automatically via a Kubernetes Job:
+
+1. Migration job runs before backend deployment (Helm hook: `pre-install`, `pre-upgrade`)
+2. Waits for PostgreSQL to be ready (30 retry attempts, 4s intervals)  
+3. Runs `alembic upgrade head` to apply all migrations
+4. Migrations are idempotent and safe to re-run
+
+View migration job status:
+
+```bash
+kubectl get jobs -n ai-app-dev | grep migration
+kubectl logs -f job/ai-app-migration-<revision> -n ai-app-dev
 ```
 
 ## Configuration
@@ -77,6 +182,13 @@ helm install ai-app . \
 | Parameter | Description | Default |
 |-----------|-------------|---------|
 | `global.environment` | Environment name | `dev` |
+| `migrations.enabled` | Run Alembic migrations as pre-install/pre-upgrade job | `true` |
+| `postgresql.host` | Azure PostgreSQL Flexible Server FQDN | `` |
+| `postgresql.port` | PostgreSQL port | `5432` |
+| `postgresql.database` | Database name | `chatdb` |
+| `postgresql.sslMode` | SSL mode (require for Azure) | `require` |
+| `postgresql.auth.username` | PostgreSQL username (format: user@servername for Azure) | `` |
+| `postgresql.auth.password` | PostgreSQL password | `` |
 | `backend.replicaCount` | Number of backend replicas | `2` |
 | `backend.autoscaling.enabled` | Enable HPA for backend | `true` |
 | `backend.autoscaling.maxReplicas` | Max backend replicas | `10` |

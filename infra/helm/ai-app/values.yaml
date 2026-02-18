@@ -12,13 +12,28 @@ global:
 migrations:
   enabled: true  # Run migrations as Helm pre-install/pre-upgrade job
   # When false, migrations must be run manually or via entrypoint
+  timeoutSeconds: 120
+  backoffLimit: 3
 
-# PostgreSQL connection (for migration job)
+# Azure PostgreSQL Flexible Server configuration
+# For external managed PostgreSQL (recommended for production)
 postgresql:
-  host: "postgres"
+  # Connection settings for Azure PostgreSQL Flexible Server
+  host: ""  # e.g., "myserver.postgres.database.azure.com"
   port: 5432
   database: "chatdb"
-  # Credentials stored in secrets
+  sslMode: "require"  # Azure requires SSL for Flexible Server
+  
+  # Credentials - set via Helm values or external secret management
+  auth:
+    username: ""  # e.g., "chatapp@myserver"
+    password: ""  # Use Azure Key Vault or --set in production
+  
+  # If using Azure AD authentication (Managed Identity)
+  azureAD:
+    enabled: false  # Set to true for Entra ID auth with Managed Identity
+    tenantId: ""
+    resourceUrl: "https://ossrdbms-aad.database.windows.net/.default"
 
 # Backend configuration
 backend:
@@ -26,9 +41,9 @@ backend:
   replicaCount: 2
   
   image:
-    repository: acrdev001.azurecr.io/backend
+    repository: acrisaru66aiappasse001.azurecr.io/ai-app-backend
     pullPolicy: IfNotPresent
-    tag: "latest"
+    tag: "v1.0.0"
   
   service:
     type: ClusterIP
@@ -100,9 +115,9 @@ frontend:
   replicaCount: 3
   
   image:
-    repository: acrdev001.azurecr.io/frontend
+    repository: acrisaru66aiappasse001.azurecr.io/ai-app-frontend
     pullPolicy: IfNotPresent
-    tag: "latest"
+    tag: "v1.0.0"
   
   service:
     type: ClusterIP
@@ -217,23 +232,23 @@ monitoring:
 azure:
   # Workload Identity
   workloadIdentity:
-    enabled: true
+    enabled: false
     clientId: ""  # Set via --set
   
   # Application Insights
   applicationInsights:
-    enabled: true
+    enabled: false
     connectionString: ""  # Set via --set or external secrets
   
   # Key Vault
   keyVault:
-    enabled: true
+    enabled: false
     name: "kv-dev-001"
     tenantId: ""  # Set via --set
 
 # Image pull secrets
-imagePullSecrets:
-  - name: acr-secret
+# Not needed when AKS kubelet identity has AcrPull role on ACR (managed identity pull)
+imagePullSecrets: []
 
 # Node selector
 nodeSelector: {}

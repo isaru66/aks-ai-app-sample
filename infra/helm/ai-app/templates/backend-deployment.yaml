@@ -40,6 +40,17 @@ spec:
         # Disable auto-migration in Kubernetes (handled by migration Job)
         - name: AUTO_MIGRATE
           value: "false"
+        # PostgreSQL connection settings
+        - name: DATABASE_TYPE
+          value: "postgresql"
+        - name: POSTGRESQL_HOST
+          value: "{{ .Values.postgresql.host }}"
+        - name: POSTGRESQL_PORT
+          value: "{{ .Values.postgresql.port | quote }}"
+        - name: POSTGRESQL_DATABASE
+          value: "{{ .Values.postgresql.database }}"
+        - name: POSTGRESQL_SSL_MODE
+          value: "{{ .Values.postgresql.sslMode | default "require" }}"
         {{- range .Values.backend.env }}
         - name: {{ .name }}
           value: {{ .value | quote }}
@@ -47,6 +58,8 @@ spec:
         envFrom:
         - secretRef:
             name: {{ include "ai-app.fullname" . }}-backend-secrets
+        - secretRef:
+            name: {{ include "ai-app.fullname" . }}-postgresql
         livenessProbe:
           {{- toYaml .Values.backend.livenessProbe | nindent 12 }}
         readinessProbe:

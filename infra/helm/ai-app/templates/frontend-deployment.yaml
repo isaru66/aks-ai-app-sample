@@ -36,7 +36,7 @@ spec:
         env:
         # Backend service URL for server-side API proxy (internal cluster DNS)
         - name: BACKEND_SERVICE_URL
-          value: "http://{{ include \"ai-app.fullname\" . }}-backend:{{ .Values.backend.service.port }}"
+          value: "http://{{ include "ai-app.fullname" . }}-backend:{{ .Values.backend.service.port }}"
         {{- range .Values.frontend.env }}
         - name: {{ .name }}
           value: {{ .value | quote }}

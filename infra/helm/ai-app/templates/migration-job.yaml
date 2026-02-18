@@ -12,7 +12,7 @@ metadata:
     "helm.sh/hook-weight": "-5"
     "helm.sh/hook-delete-policy": before-hook-creation
 spec:
-  backoffLimit: 3
+  backoffLimit: {{ .Values.migrations.backoffLimit | default 3 }}
   ttlSecondsAfterFinished: 100
   template:
     metadata:
@@ -26,6 +26,29 @@ spec:
       {{- end }}
       serviceAccountName: {{ include "ai-app.serviceAccountName" . }}
       containers:
+      # Wait for PostgreSQL to be ready
+      - name: wait-for-postgres
+        image: postgres:16-alpine
+        imagePullPolicy: IfNotPresent
+        command: 
+          - sh
+          - -c
+          - |
+            echo "Waiting for PostgreSQL at {{ .Values.postgresql.host }}:{{ .Values.postgresql.port }}..."
+            attempt=1
+            max_attempts=30
+            while [ $attempt -le $max_attempts ]; do
+              if pg_isready -h {{ .Values.postgresql.host }} -p {{ .Values.postgresql.port }} 2>/dev/null; then
+                echo "PostgreSQL is ready!"
+                exit 0
+              fi
+              echo "Attempt $attempt/$max_attempts: PostgreSQL not ready yet..."
+              sleep 4
+              attempt=$((attempt + 1))
+            done
+            echo "Failed to connect to PostgreSQL after $max_attempts attempts"
+            exit 1
+      # Run Alembic migrations
       - name: migration
         image: {{ include "ai-app.backend.image" . }}
         imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
@@ -35,23 +58,28 @@ spec:
         - name: {{ .name }}
           value: {{ .value | quote }}
         {{- end }}
-        # Database configuration from secrets
+        # Database configuration
         - name: POSTGRESQL_HOST
-          value: "{{ .Values.postgresql.host | default "postgres" }}"
+          value: "{{ .Values.postgresql.host }}"
         - name: POSTGRESQL_PORT
-          value: "{{ .Values.postgresql.port | default "5432" }}"
+          value: "{{ .Values.postgresql.port | quote }}"
         - name: POSTGRESQL_DATABASE
-          value: "{{ .Values.postgresql.database | default "chatdb" }}"
+          value: "{{ .Values.postgresql.database }}"
+        - name: POSTGRESQL_SSL_MODE
+          value: "{{ .Values.postgresql.sslMode | default "require" }}"
         - name: POSTGRESQL_USER
           valueFrom:
             secretKeyRef:
-              name: {{ include "ai-app.fullname" . }}-secrets
-              key: postgresql-user
+              name: {{ include "ai-app.fullname" . }}-postgresql
+              key: POSTGRESQL_USER
         - name: POSTGRESQL_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: {{ include "ai-app.fullname" . }}-secrets
-              key: postgresql-password
+              name: {{ include "ai-app.fullname" . }}-postgresql
+              key: POSTGRESQL_PASSWORD
+        # Required by backend app config
+        - name: DATABASE_TYPE
+          value: "postgresql"
         resources:
           requests:
             cpu: 100m
