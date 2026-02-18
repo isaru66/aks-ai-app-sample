@@ -190,7 +190,6 @@ gateway:
 serviceAccount:
   create: true
   annotations:
-    azure.workload.identity/client-id: ""  # Set for workload identity
   name: ai-app
 
 # Pod Security
@@ -230,21 +229,21 @@ monitoring:
 
 # Azure specific
 azure:
-  # Workload Identity
+  # Workload Identity - for authenticating to Azure services via managed identity
   workloadIdentity:
     enabled: false
-    clientId: ""  # Set via --set
+    clientId: ""  # Set via --set (Azure Entra application client ID)
   
   # Application Insights
   applicationInsights:
     enabled: false
     connectionString: ""  # Set via --set or external secrets
   
-  # Key Vault
+  # Key Vault and tenantId
   keyVault:
     enabled: false
     name: "kv-dev-001"
-    tenantId: ""  # Set via --set
+    tenantId: ""  # Set via --set (Azure Entra tenant ID for workload identity)
 
 # Image pull secrets
 # Not needed when AKS kubelet identity has AcrPull role on ACR (managed identity pull)

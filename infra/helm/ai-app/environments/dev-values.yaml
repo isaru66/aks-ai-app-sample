@@ -6,16 +6,15 @@ global:
 # Deployment targets external managed PostgreSQL in Azure
 postgresql:
   # Azure PostgreSQL Flexible Server hostname
-  host: "myserver-dev.postgres.database.azure.com"
+  host: "psql-isaru66-aiapp-asse-001.postgres.database.azure.com"
   port: 5432
   database: "chatdb"
   # Azure requires SSL/TLS for connections
   sslMode: "require"
   auth:
     # Username format: username@servername
-    username: "chatapp@myserver-dev"
-    password: "" # REQUIRED - provide via --set or external secrets
-    # password: "your-strong-password"
+    username: "chatapp"
+    password: "" # REQUIRED - provide via secret
 
 backend:
   replicaCount: 2
@@ -26,3 +25,9 @@ frontend:
 gateway:
   tls:
     enabled: false
+# Azure Workload Identity (set enabled: true to use)
+azure:
+  workloadIdentity:
+    enabled: true
+    tenantId: "ddcbdc96-6162-4d91-bb0d-066343049ce1"
+    clientId: "8f8bc89b-9344-4009-8370-02ff9c655070"
