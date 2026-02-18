@@ -21,10 +21,6 @@ export function CompactThinkingIndicator({
     return null
   }
 
-  const avgConfidence = steps.length > 0
-    ? steps.reduce((acc, step) => acc + step.confidence, 0) / steps.length
-    : 0
-
   return (
     <button
       onClick={onClick}
@@ -46,11 +42,7 @@ export function CompactThinkingIndicator({
         {isActive ? 'Thinking...' : `${steps.length} steps`}
       </span>
 
-      {!isActive && steps.length > 0 && (
-        <span className="text-muted-foreground">
-          ({Math.round(avgConfidence * 100)}%)
-        </span>
-      )}
+
     </button>
   )
 }
