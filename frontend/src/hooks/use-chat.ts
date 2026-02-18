@@ -1,13 +1,15 @@
 import { useState, useCallback, useRef } from 'react'
 import { streamChat } from '@/lib/stream-client'
 import { useWordBuffer } from '@/hooks/use-word-buffer'
-import type { ChatMessage, ThinkingStep, StreamChunk, MessageRole, ReasoningEffort, Verbosity } from '@/types/chat'
+import type { ChatMessage, ThinkingStep, StreamChunk, MessageRole, ReasoningEffort, Verbosity, MCPServerPayload } from '@/types/chat'
 
 export interface UseChatOptions {
   onThinkingStep?: (step: ThinkingStep) => void
   onContentChunk?: (content: string) => void
   onComplete?: (sessionId: string) => void
   onError?: (error: string) => void
+  /** Active MCP server configurations to forward to the backend */
+  mcpServers?: MCPServerPayload[]
 }
 
 export function useChat(options: UseChatOptions = {}) {
@@ -132,6 +134,7 @@ export function useChat(options: UseChatOptions = {}) {
           showThinking,
           reasoningEffort,
           verbosity,
+          mcpServers: options.mcpServers,
         })) {
           // Stream is being processed through callbacks
         }

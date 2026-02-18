@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, HttpUrl
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 from enum import Enum
@@ -54,6 +54,22 @@ class Verbosity(str, Enum):
     HIGH = "high"
 
 
+class MCPTransport(str, Enum):
+    """MCP server transport protocol."""
+    STREAMABLE_HTTP = "streamable-http"
+    SSE = "sse"
+
+
+class MCPServerConfig(BaseModel):
+    """MCP server configuration forwarded from the frontend."""
+    url: str = Field(..., description="MCP server URL")
+    transport: MCPTransport = Field(
+        default=MCPTransport.STREAMABLE_HTTP,
+        description="Transport protocol (streamable-http or sse)"
+    )
+    api_key: Optional[str] = Field(default=None, description="Optional bearer token")
+
+
 class ChatRequest(BaseModel):
     """Chat request model."""
     messages: List[ChatMessage] = Field(..., description="Conversation messages")
@@ -70,7 +86,11 @@ class ChatRequest(BaseModel):
         description="Text output verbosity: low, medium, high (GPT-5 series)"
     )
     max_tokens: Optional[int] = Field(default=16000, gt=0, description="Maximum output tokens")
-    
+    mcp_servers: Optional[List[MCPServerConfig]] = Field(
+        default=None,
+        description="MCP servers to use for tool calling during this request"
+    )
+
     class Config:
         json_schema_extra = {
             "example": {

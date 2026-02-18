@@ -1,5 +1,5 @@
 import { EventSourceParserStream } from 'eventsource-parser/stream'
-import type { StreamChunk, ChatMessage, ReasoningEffort, Verbosity } from '@/types/chat'
+import type { StreamChunk, ChatMessage, ReasoningEffort, Verbosity, MCPServerPayload } from '@/types/chat'
 
 export interface StreamOptions {
   onThinking?: (step: StreamChunk) => void
@@ -12,6 +12,8 @@ export interface StreamChatParams {
   showThinking?: boolean
   reasoningEffort?: ReasoningEffort
   verbosity?: Verbosity
+  /** Active MCP servers to forward to the backend for tool calling */
+  mcpServers?: MCPServerPayload[]
 }
 
 export async function* streamChat(
@@ -35,6 +37,9 @@ export async function* streamChat(
       stream: true,
       reasoning_effort: params.reasoningEffort ?? 'medium',
       verbosity: params.verbosity ?? 'medium',
+      ...(params.mcpServers && params.mcpServers.length > 0
+        ? { mcp_servers: params.mcpServers }
+        : {}),
     }),
     signal,
   })

@@ -80,13 +80,14 @@ async def chat_stream_generator(
         thinking_steps_list = []
         content_parts = []
         
-        # Stream response with thinking
+        # Stream response with thinking (+ optional MCP tool calling)
         async for chunk in chat_graph.stream_chat(
             messages=messages,
             show_thinking=request.show_thinking,
             reasoning_effort=request.reasoning_effort.value,
             verbosity=request.verbosity.value,
             max_tokens=request.max_tokens or 16000,
+            mcp_servers=request.mcp_servers or [],
         ):
             # Format as SSE — single-pass JSON serialization
             yield f"data: {chunk.model_dump_json()}\n\n"

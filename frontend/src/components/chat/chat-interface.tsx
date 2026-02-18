@@ -2,7 +2,9 @@
 
 import { ChatMessages } from './chat-messages'
 import { ChatInput } from './chat-input'
+import { MCPServersPanel } from './mcp-servers-panel'
 import { useChat } from '@/hooks/use-chat'
+import { useMCPServers } from '@/hooks/use-mcp-servers'
 import { Settings, Trash2, ChevronDown } from 'lucide-react'
 import { useState } from 'react'
 import type { ReasoningEffort, Verbosity } from '@/types/chat'
@@ -22,6 +24,8 @@ const VERBOSITY_OPTIONS: { value: Verbosity; label: string; description: string 
 ]
 
 export function ChatInterface() {
+  const mcpServersHook = useMCPServers()
+
   const {
     messages,
     isStreaming,
@@ -50,6 +54,11 @@ export function ChatInterface() {
     onError: (error) => {
       console.error('Chat error:', error)
     },
+    mcpServers: mcpServersHook.activeServers.map((s) => ({
+      url: s.url,
+      transport: s.transport,
+      api_key: s.apiKey,
+    })),
   })
 
   const [showSettings, setShowSettings] = useState(false)
@@ -197,6 +206,11 @@ export function ChatInterface() {
               verbosity: <span className="font-mono font-medium text-foreground">{verbosity}</span>
               {' · '}
               reasoning summary: <span className="font-mono font-medium text-foreground">{showThinking ? 'auto' : 'none'}</span>
+            </div>
+
+            {/* MCP Servers */}
+            <div className="border-t pt-3">
+              <MCPServersPanel hook={mcpServersHook} />
             </div>
           </div>
         )}

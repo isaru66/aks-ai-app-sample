@@ -37,6 +37,12 @@ export interface StreamChunk {
 export type ReasoningEffort = 'none' | 'minimal' | 'low' | 'medium' | 'high'
 export type Verbosity = 'low' | 'medium' | 'high'
 
+export interface MCPServerPayload {
+  url: string
+  transport: 'streamable-http' | 'sse'
+  api_key?: string
+}
+
 export interface ChatRequest {
   messages: ChatMessage[]
   session_id?: string
@@ -46,6 +52,8 @@ export interface ChatRequest {
   reasoning_effort?: ReasoningEffort
   verbosity?: Verbosity
   max_tokens?: number
+  /** Active MCP servers for tool calling */
+  mcp_servers?: MCPServerPayload[]
 }
 
 export interface ChatResponse {
