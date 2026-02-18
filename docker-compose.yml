@@ -23,7 +23,6 @@ services:
       - AZURE_SEARCH_API_KEY=${AZURE_SEARCH_API_KEY}
       - AZURE_STORAGE_ACCOUNT_NAME=${AZURE_STORAGE_ACCOUNT_NAME}
       - AZURE_STORAGE_ACCOUNT_KEY=${AZURE_STORAGE_ACCOUNT_KEY}
-      - REDIS_URL=redis://redis:6379/0
       - LOG_LEVEL=DEBUG
       - ENABLE_STREAMING=true
       - ENABLE_THINKING_PROCESS=true
@@ -40,8 +39,6 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      redis:
-        condition: service_started
     networks:
       - ai-app-network
     restart: unless-stopped
@@ -69,18 +66,6 @@ services:
       - ai-app-network
     restart: unless-stopped
 
-  # Redis (Optional - for caching)
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis-data:/data
-    networks:
-      - ai-app-network
-    restart: unless-stopped
-    command: redis-server --appendonly yes
-
   # PostgreSQL Database
   postgres:
     image: postgres:16-alpine
@@ -107,5 +92,4 @@ networks:
     driver: bridge
 
 volumes:
-  redis-data:
   postgres-data:

@@ -104,10 +104,6 @@ class Settings(BaseSettings):
     enable_rag: bool = True
     enable_agents: bool = True
     
-    # Redis (Optional)
-    redis_url: Optional[str] = None
-    redis_password: Optional[str] = None
-    
     # Authentication
     jwt_secret_key: str = "change-this-secret-key-in-production"
     jwt_algorithm: str = "HS256"
