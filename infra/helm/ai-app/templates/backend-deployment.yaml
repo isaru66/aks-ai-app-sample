@@ -43,13 +43,20 @@ spec:
         - name: DATABASE_TYPE
           value: "postgresql"
         - name: POSTGRESQL_HOST
-          value: "{{ .Values.postgresql.host }}"
+          value: {{ .Values.postgresql.host | quote }}
         - name: POSTGRESQL_PORT
-          value: "{{ .Values.postgresql.port }}"
+          value: {{ .Values.postgresql.port | quote }}
         - name: POSTGRESQL_DATABASE
-          value: "{{ .Values.postgresql.database }}"
+          value: {{ .Values.postgresql.database | quote }}
         - name: POSTGRESQL_SSL_MODE
           value: {{ .Values.postgresql.sslMode | default "require" }}
+        - name: AZURE_CLIENT_ID
+          value: {{ .Values.azure.workloadIdentity.clientId }}
+        - name: AZURE_SEARCH_API_KEY
+          value: "test"
+        - name: AZURE_SEARCH_ENDPOINT
+          value: "test"
+        
         {{- range .Values.backend.env }}
         - name: {{ .name }}
           value: {{ .value | quote }}
@@ -57,8 +64,6 @@ spec:
         envFrom:
         - secretRef:
             name: {{ include "ai-app.fullname" . }}-backend-secrets
-        - secretRef:
-            name: {{ include "ai-app.fullname" . }}-postgresql
         livenessProbe:
           {{- toYaml .Values.backend.livenessProbe | nindent 12 }}
         readinessProbe:
