@@ -103,6 +103,7 @@ infra/helm/**/*.tgz
 infra/helm/output/
 kubeconfig
 *.kubeconfig
+secret.yaml
 
 # Azure specific
 .azure/
