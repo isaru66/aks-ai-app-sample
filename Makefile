@@ -73,10 +73,9 @@ destroy-dev: workspace-dev ## Destroy dev infrastructure
 	cd $(TERRAFORM_DIR) && terraform destroy -var-file="environments/dev.tfvars"
 
 # Kubernetes targets
-install-gateway: ## Install Envoy Gateway
-	@echo '$(GREEN)Installing Envoy Gateway...$(NC)'
-	kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/standard-install.yaml
-	helm install eg oci://docker.io/envoyproxy/gateway-helm --version v1.0.0 -n envoy-gateway-system --create-namespace
+install-gateway: ## Install Envoy Gateway v1.7.0 (prerequisite — run once per cluster)
+	@echo '$(GREEN)Installing Envoy Gateway v1.7.0...$(NC)'
+	bash infra/helm/install-envoy-gateway.sh
 
 helm-install-dev: ## Install Helm chart (dev)
 	@echo '$(GREEN)Installing Helm chart for dev...$(NC)'

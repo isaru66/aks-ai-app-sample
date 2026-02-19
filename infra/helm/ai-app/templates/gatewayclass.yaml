@@ -1,0 +1,10 @@
+{{- if .Values.gateway.gatewayClass.create }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: {{ .Values.gateway.className }}
+  labels:
+    {{- include "ai-app.labels" . | nindent 4 }}
+spec:
+  controllerName: {{ .Values.gateway.gatewayClass.controllerName }}
+{{- end }}

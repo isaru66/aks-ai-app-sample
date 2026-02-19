@@ -27,10 +27,9 @@ spec:
       consecutive5XxErrors: 5
       interval: 5s
       maxEjectionPercent: 100
-  compression:
-    type: Gzip
-    gzip:
-      quality: 6
+  # NOTE: Gzip compression intentionally omitted for the backend service.
+  # SSE responses (text/event-stream) are incompatible with proxy-level Gzip
+  # compression and cause ERR_HTTP2_PROTOCOL_ERROR in the browser.
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: BackendTrafficPolicy
@@ -49,7 +48,8 @@ spec:
     tcp:
       connectTimeout: 10s
     http:
-      requestTimeout: 60s
+      requestTimeout: 310s  # Slightly above SSE stream max (300s) to avoid premature reset
+      connectionIdleTimeout: 310s
   healthCheck:
     passive:
       splitExternalLocalOriginErrors: true
@@ -57,6 +57,7 @@ spec:
       consecutive5XxErrors: 5
       interval: 5s
       maxEjectionPercent: 100
-  compression:
-    type: Gzip
+  # NOTE: Gzip compression intentionally omitted.
+  # SSE responses (text/event-stream) from the Next.js SSE proxy are incompatible
+  # with proxy-level Gzip compression and cause ERR_HTTP2_PROTOCOL_ERROR.
 {{- end }}

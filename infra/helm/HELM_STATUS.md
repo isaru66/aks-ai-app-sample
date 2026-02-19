@@ -194,7 +194,7 @@ spec:
 - Frontend: 2-10 pods
 - TLS: Disabled
 - Network Policy: Disabled
-- Domain: `ai-app-dev.example.com`
+- Domain: `dev-ai-app.isaru66-msft-demo.net`
 
 ### SIT
 - Backend: 2-8 pods
@@ -331,14 +331,14 @@ GATEWAY_IP=$(kubectl get gateway ai-app-gateway -n ai-app-dev \
   -o jsonpath='{.status.addresses[0].value}')
 
 # Test frontend
-curl -H "Host: ai-app-dev.example.com" http://$GATEWAY_IP/
+curl -H "Host: dev-ai-app.isaru66-msft-demo.net" http://$GATEWAY_IP/
 
 # Test backend health
-curl -H "Host: ai-app-dev.example.com" \
+curl -H "Host: dev-ai-app.isaru66-msft-demo.net" \
   http://$GATEWAY_IP/api/v1/health/
 
 # Test SSE streaming
-curl -N -H "Host: ai-app-dev.example.com" \
+curl -N -H "Host: dev-ai-app.isaru66-msft-demo.net" \
   -H "Content-Type: application/json" \
   -d '{"messages":[{"role":"user","content":"Hello"}],"stream":true}' \
   http://$GATEWAY_IP/api/v1/chat/completions

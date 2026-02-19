@@ -165,14 +165,21 @@ frontend:
 # Envoy Gateway configuration
 gateway:
   enabled: true
-  className: envoy
+  className: eg
+
+  # GatewayClass configuration
+  # Set create: true only if the Envoy Gateway GatewayClass is not already installed
+  # in the cluster (e.g., not installed via the Envoy Gateway Helm chart)
+  gatewayClass:
+    create: true
+    controllerName: gateway.envoyproxy.io/gatewayclass-controller
   
   # HTTPRoute configuration
   # Only frontend is exposed - backend is internal-only via cluster DNS
   routes:
     - name: frontend
       hostnames:
-        - "ai-app-dev.example.com"
+        - "dev-ai-app.isaru66-msft-demo.net"
       rules:
         - path: /
           pathType: PathPrefix
@@ -182,9 +189,16 @@ gateway:
   # TLS configuration
   tls:
     enabled: true
+    # Set create: true to have Helm manage the TLS Secret directly (e.g. for dev/test).
+    # Set create: false when the secret is managed externally (cert-manager, Azure Key Vault CSI, etc.)
+    create: true
     secretName: ai-app-tls
     hosts:
-      - "ai-app-dev.example.com"
+      - "dev-ai-app.isaru66-msft-demo.net"
+    # PEM-encoded certificate and key (plain text — Helm will base64-encode them).
+    # Only used when tls.create: true. Supply via --set or a secret values file.
+    crt: ""
+    key: ""
 
 # Service Account
 serviceAccount:

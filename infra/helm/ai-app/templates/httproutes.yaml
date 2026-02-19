@@ -39,12 +39,11 @@ spec:
         - name: X-Real-IP
           value: "%DOWNSTREAM_REMOTE_ADDRESS_WITHOUT_PORT%"
     {{- end }}
-    {{- if eq .path "/api" }}
-    # SSE streaming support for /api/v1/chat/completions
+    # SSE streaming support: allow up to 5 min for long-running streams (chat/RAG).
+    # Applied to all routes because SSE proxying goes through the frontend at /.
     timeouts:
-      request: 300s  # 5 minutes for long-running streams
-      backendRequest: 300s
-    {{- end }}
+      request: 310s
+      backendRequest: 310s
   {{- end }}
 {{- end }}
 {{- end }}

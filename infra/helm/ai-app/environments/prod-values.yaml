@@ -5,14 +5,13 @@ global:
 # Azure PostgreSQL Flexible Server configuration (Production)
 postgresql:
   # Azure PostgreSQL Flexible Server hostname
-  host: "myserver-prod.postgres.database.azure.com"
+  host: "psql-isaru66-aiapp-asse-001.postgres.database.azure.com"
   port: 5432
   database: "chatdb"
   # Azure requires SSL/TLS for connections
   sslMode: "require"
   auth:
-    # Username format: username@servername
-    username: "chatapp@myserver-prod"
+    username: "chatapp"
     password: "" # REQUIRED - provide via Azure Key Vault or --set
 
 backend:
@@ -24,6 +23,10 @@ frontend:
   replicaCount: 3
   image:
     tag: "v1.0.0"
+
+gateway:
+  tls:
+    enabled: true
 # Azure Workload Identity (set enabled: true to use)
 azure:
   workloadIdentity:

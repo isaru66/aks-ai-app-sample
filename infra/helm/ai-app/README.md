@@ -250,16 +250,16 @@ helm uninstall ai-app --namespace ai-app-dev
 kubectl get gateway -n ai-app-dev
 
 # Test frontend
-curl http://ai-app-dev.example.com/
+curl http://dev-ai-app.isaru66-msft-demo.net/
 
 # Test backend health
-curl http://ai-app-dev.example.com/api/v1/health/
+curl http://dev-ai-app.isaru66-msft-demo.net/api/v1/health/
 
 # Test SSE streaming (with auth token)
 curl -N -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
   -d '{"messages":[{"role":"user","content":"Hello"}],"stream":true}' \
-  http://ai-app-dev.example.com/api/v1/chat/completions
+  http://dev-ai-app.isaru66-msft-demo.net/api/v1/chat/completions
 ```
 
 ## Monitoring

@@ -1,0 +1,34 @@
+{{- if .Values.gateway.enabled }}
+{{- if gt (int .Values.frontend.replicaCount) 1 }}
+# BackendLBPolicy — session persistence for the frontend service.
+#
+# Problem: With multiple frontend pods, HTTP/2 multiplexing allows Envoy to route
+# requests from the same browser connection to different pods. For SSE
+# (text/event-stream) this causes ERR_HTTP2_PROTOCOL_ERROR because:
+#   1. SSE state is maintained inside the Next.js API proxy per-pod.
+#   2. A stream started on pod-A cannot be continued on pod-B mid-flight.
+#
+# Fix: Cookie-based session affinity pins a browser session to one frontend pod.
+# The lb-session cookie is Set-Cookie'd on the first response and presented on
+# all subsequent requests so Envoy always routes to the same upstream pod.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendLBPolicy
+metadata:
+  name: {{ include "ai-app.fullname" . }}-frontend-lb-policy
+  labels:
+    {{- include "ai-app.labels" . | nindent 4 }}
+spec:
+  targetRef:
+    group: ""
+    kind: Service
+    name: {{ include "ai-app.fullname" . }}-frontend
+    namespace: {{ .Release.Namespace }}
+  sessionPersistence:
+    sessionName: lb-session
+    type: Cookie
+    cookieConfig:
+      # Use a session-scoped cookie (no Max-Age / Expires) so it disappears when
+      # the browser tab closes, forcing re-balancing on fresh sessions.
+      lifetimeType: Session
+{{- end }}
+{{- end }}

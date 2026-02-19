@@ -222,13 +222,13 @@ kubectl delete namespace ai-app-test
 GATEWAY_IP=$(kubectl get gateway ai-app-gateway -n ai-app-dev -o jsonpath='{.status.addresses[0].value}')
 
 # Test frontend
-curl -H "Host: ai-app-dev.example.com" http://$GATEWAY_IP/
+curl -H "Host: dev-ai-app.isaru66-msft-demo.net" http://$GATEWAY_IP/
 
 # Test backend API
-curl -H "Host: ai-app-dev.example.com" http://$GATEWAY_IP/api/v1/health/
+curl -H "Host: dev-ai-app.isaru66-msft-demo.net" http://$GATEWAY_IP/api/v1/health/
 
 # Test SSE streaming (requires auth token)
-curl -N -H "Host: ai-app-dev.example.com" \
+curl -N -H "Host: dev-ai-app.isaru66-msft-demo.net" \
   -H "Content-Type: application/json" \
   -d '{"messages":[{"role":"user","content":"Hello"}],"stream":true}' \
   http://$GATEWAY_IP/api/v1/chat/completions
@@ -256,7 +256,7 @@ export const options = {
 };
 
 export default function () {
-  const res = http.get('http://ai-app-dev.example.com/api/v1/health/');
+  const res = http.get('http://dev-ai-app.isaru66-msft-demo.net/api/v1/health/');
   check(res, { 'status is 200': (r) => r.status === 200 });
 }
 EOF
