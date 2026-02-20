@@ -63,17 +63,6 @@ output "search_name" {
   value       = var.enable_ai_services && var.enable_azure_search_service ? module.ai_services[0].search_name : null
 }
 
-# Cosmos DB Outputs
-output "cosmosdb_endpoint" {
-  description = "Cosmos DB endpoint"
-  value       = var.enable_cosmosdb ? module.cosmosdb[0].endpoint : null
-}
-
-output "cosmosdb_database_name" {
-  description = "Cosmos DB database name"
-  value       = var.enable_cosmosdb ? module.cosmosdb[0].database_name : null
-}
-
 # Storage Outputs
 output "storage_account_name" {
   description = "Storage account name"
@@ -170,6 +159,27 @@ output "environment" {
 output "workspace" {
   description = "Current Terraform workspace"
   value       = terraform.workspace
+}
+
+# PostgreSQL Outputs
+output "postgresql_server_name" {
+  description = "PostgreSQL Flexible Server name"
+  value       = var.enable_postgresql ? module.postgresql[0].server_name : null
+}
+
+output "postgresql_fqdn" {
+  description = "PostgreSQL server fully qualified domain name"
+  value       = var.enable_postgresql ? module.postgresql[0].fqdn : null
+}
+
+output "postgresql_database_name" {
+  description = "PostgreSQL default database name"
+  value       = var.enable_postgresql ? module.postgresql[0].database_name : null
+}
+
+output "postgresql_connection_string" {
+  description = "PostgreSQL connection string (passwordless placeholder)"
+  value       = var.enable_postgresql ? module.postgresql[0].connection_string : null
 }
 
 # Service Principal Outputs

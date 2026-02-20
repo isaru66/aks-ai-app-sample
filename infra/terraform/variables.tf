@@ -113,25 +113,6 @@ variable "search_partition_count" {
   default     = 1
 }
 
-# Cosmos DB variables
-variable "cosmosdb_offer_type" {
-  description = "Cosmos DB offer type"
-  type        = string
-  default     = "Standard"
-}
-
-variable "cosmosdb_consistency_level" {
-  description = "Cosmos DB consistency level"
-  type        = string
-  default     = "Session"
-}
-
-variable "enable_cosmosdb_free_tier" {
-  description = "Enable Cosmos DB free tier (only one per subscription)"
-  type        = bool
-  default     = false
-}
-
 # Storage variables
 variable "storage_account_tier" {
   description = "Storage account tier"
@@ -258,10 +239,78 @@ variable "enable_storage" {
   default     = true
 }
 
-variable "enable_cosmosdb" {
-  description = "Enable Azure Cosmos DB"
+variable "enable_postgresql" {
+  description = "Enable Azure PostgreSQL Flexible Server"
   type        = bool
   default     = false
+}
+
+# PostgreSQL variables
+variable "postgresql_admin_login" {
+  description = "PostgreSQL administrator login name"
+  type        = string
+  default     = "psqladmin"
+}
+
+variable "postgresql_admin_password" {
+  description = "PostgreSQL administrator password"
+  type        = string
+  sensitive   = true
+  default     = null
+}
+
+variable "postgresql_sku_name" {
+  description = "PostgreSQL Flexible Server SKU (e.g., B_Standard_B2s, GP_Standard_D2s_v3)"
+  type        = string
+  default     = "B_Standard_B2s"
+}
+
+variable "postgresql_version" {
+  description = "PostgreSQL major version"
+  type        = string
+  default     = "16"
+}
+
+variable "postgresql_storage_mb" {
+  description = "PostgreSQL max storage in megabytes"
+  type        = number
+  default     = 32768
+}
+
+variable "postgresql_storage_tier" {
+  description = "PostgreSQL storage performance tier"
+  type        = string
+  default     = "P4"
+}
+
+variable "postgresql_zone" {
+  description = "Availability zone for the PostgreSQL server (1, 2, or 3)"
+  type        = string
+  default     = "1"
+}
+
+variable "postgresql_backup_retention_days" {
+  description = "PostgreSQL backup retention period in days (7-35)"
+  type        = number
+  default     = 7
+}
+
+variable "postgresql_geo_redundant_backup" {
+  description = "Enable geo-redundant backups for PostgreSQL"
+  type        = bool
+  default     = false
+}
+
+variable "postgresql_database_name" {
+  description = "Name of the default PostgreSQL application database"
+  type        = string
+  default     = "chatdb"
+}
+
+variable "postgresql_active_directory_auth_enabled" {
+  description = "Enable Azure AD authentication for PostgreSQL"
+  type        = bool
+  default     = true
 }
 
 variable "enable_ai_services" {

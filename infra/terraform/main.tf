@@ -124,23 +124,6 @@ module "storage" {
   tags                    = local.common_tags
 }
 
-# Cosmos DB Module
-module "cosmosdb" {
-  count  = var.enable_cosmosdb ? 1 : 0
-  source = "./modules/cosmosdb"
-
-  resource_group_name     = data.azurerm_resource_group.main.name
-  location                = data.azurerm_resource_group.main.location
-  environment             = var.environment
-  resource_suffix         = var.resource_suffix
-  offer_type              = var.cosmosdb_offer_type
-  consistency_level       = var.cosmosdb_consistency_level
-  enable_free_tier        = var.enable_cosmosdb_free_tier
-  enable_private_endpoint = var.enable_private_endpoints
-  subnet_id               = module.networking.private_endpoints_subnet_id
-  tags                    = local.common_tags
-}
-
 # AI Services Module (Azure AI Search + Content Safety)
 module "ai_services" {
   count  = var.enable_ai_services ? 1 : 0
@@ -190,6 +173,36 @@ module "ai_foundry" {
     module.storage,
     module.keyvault
   ]
+}
+
+# PostgreSQL Module
+module "postgresql" {
+  count  = var.enable_postgresql ? 1 : 0
+  source = "./modules/postgresql"
+
+  resource_group_name = data.azurerm_resource_group.main.name
+  location            = data.azurerm_resource_group.main.location
+  environment         = var.environment
+  resource_suffix     = var.resource_suffix
+
+  administrator_login    = var.postgresql_admin_login
+  administrator_password = var.postgresql_admin_password
+
+  sku_name     = var.postgresql_sku_name
+  pg_version   = var.postgresql_version
+  storage_mb   = var.postgresql_storage_mb
+  storage_tier = var.postgresql_storage_tier
+  zone         = var.postgresql_zone
+
+  backup_retention_days        = var.postgresql_backup_retention_days
+  geo_redundant_backup_enabled = var.postgresql_geo_redundant_backup
+
+  database_name = var.postgresql_database_name
+
+  active_directory_auth_enabled = var.postgresql_active_directory_auth_enabled
+  tenant_id                     = var.tenant_id
+
+  tags = local.common_tags
 }
 
 # Service Principal Module
@@ -274,18 +287,6 @@ resource "azurerm_key_vault_secret" "search_key" {
   depends_on = [
     module.keyvault,
     module.ai_services
-  ]
-}
-
-resource "azurerm_key_vault_secret" "cosmosdb_key" {
-  count        = var.enable_keyvault && var.enable_cosmosdb ? 1 : 0
-  name         = "azure-cosmosdb-key"
-  value        = module.cosmosdb[0].primary_key
-  key_vault_id = module.keyvault[0].key_vault_id
-
-  depends_on = [
-    module.keyvault,
-    module.cosmosdb
   ]
 }
 
