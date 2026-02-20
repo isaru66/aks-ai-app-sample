@@ -1,6 +1,9 @@
 #!/bin/bash
 set -e
 
+echo "Starting backend container"
+echo "Connecting to PostgreSQL at ${POSTGRESQL_HOST}:${POSTGRESQL_PORT}"
+echo "Using database: ${POSTGRESQL_DATABASE}, user: ${POSTGRESQL_USER}"
 echo "Waiting for PostgreSQL to be ready..."
 # Wait for PostgreSQL
 while ! nc -z ${POSTGRESQL_HOST:-localhost} ${POSTGRESQL_PORT:-5432}; do
