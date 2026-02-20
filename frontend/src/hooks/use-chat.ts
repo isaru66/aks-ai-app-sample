@@ -21,7 +21,7 @@ export function useChat(options: UseChatOptions = {}) {
   const [reasoningEffort, setReasoningEffort] = useState<ReasoningEffort>('low')
   const [verbosity, setVerbosity] = useState<Verbosity>('low')
   const [showThinking, setShowThinking] = useState(true)
-  const [model, setModel] = useState<ModelId>('gpt-5.2')
+  const [model, setModel] = useState<ModelId>('gpt-5-mini')
   const abortControllerRef = useRef<AbortController | null>(null)
 
   // Refs for collecting the full raw content (for storage) and thinking steps
