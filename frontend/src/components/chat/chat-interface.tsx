@@ -8,6 +8,7 @@ import { useMCPServers } from '@/hooks/use-mcp-servers'
 import { Settings, Trash2, ChevronDown } from 'lucide-react'
 import { useState } from 'react'
 import type { ReasoningEffort, Verbosity, ModelId } from '@/types/chat'
+import { ErrorModal } from '@/components/ui/error-modal'
 
 const MODEL_OPTIONS: { value: ModelId; label: string; description: string }[] = [
   { value: 'gpt-5.2', label: 'GPT-5.2', description: 'Full reasoning model' },
@@ -30,6 +31,8 @@ const VERBOSITY_OPTIONS: { value: Verbosity; label: string; description: string 
 
 export function ChatInterface() {
   const mcpServersHook = useMCPServers()
+  const [showSettings, setShowSettings] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   const {
     messages,
@@ -60,6 +63,7 @@ export function ChatInterface() {
     },
     onError: (error) => {
       console.error('Chat error:', error)
+      setErrorMessage(error)
     },
     mcpServers: mcpServersHook.activeServers.map((s) => ({
       url: s.url,
@@ -68,10 +72,16 @@ export function ChatInterface() {
     })),
   })
 
-  const [showSettings, setShowSettings] = useState(false)
 
   return (
     <div className="flex h-full flex-col">
+      {/* Error Modal */}
+      {errorMessage && (
+        <ErrorModal
+          message={errorMessage}
+          onClose={() => setErrorMessage(null)}
+        />
+      )}
       {/* Header */}
       <div className="border-b bg-background px-4 py-3">
         <div className="mx-auto flex max-w-4xl items-center justify-between">
