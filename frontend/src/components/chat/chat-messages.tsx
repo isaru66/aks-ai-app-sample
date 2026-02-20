@@ -10,6 +10,7 @@ import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
 import { preprocessLaTeX } from '@/lib/utils'
+import { CodeBlock } from './code-block'
 
 interface ChatMessagesProps {
   messages: ChatMessageType[]
@@ -72,7 +73,11 @@ export function ChatMessages({
             {/* Current Content (streaming) */}
             {currentContent && (
               <div className="prose prose-sm max-w-none dark:prose-invert">
-                <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]}>
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm, remarkMath]}
+                  rehypePlugins={[rehypeKatex]}
+                  components={{ code: (props) => <CodeBlock {...props} /> }}
+                >
                   {preprocessLaTeX(currentContent)}
                 </ReactMarkdown>
               </div>

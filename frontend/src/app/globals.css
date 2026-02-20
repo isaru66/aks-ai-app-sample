@@ -89,14 +89,4 @@
   @apply my-2;
 }
 
-.prose pre {
-  @apply bg-muted rounded-lg p-4 overflow-x-auto;
-}
-
-.prose code {
-  @apply bg-muted px-1.5 py-0.5 rounded text-sm;
-}
-
-.prose pre code {
-  @apply bg-transparent p-0;
-}
+/* prose pre/code are handled by the CodeBlock component — no override needed */

@@ -7,6 +7,7 @@ import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
 import type { ChatMessage as ChatMessageType } from '@/types/chat'
 import { ThinkingProcess } from './thinking-process'
+import { CodeBlock } from './code-block'
 import { cn } from '@/lib/utils'
 import { formatTimestamp, preprocessLaTeX } from '@/lib/utils'
 
@@ -46,7 +47,11 @@ export function ChatMessage({ message, showThinking = true }: ChatMessageProps) 
 
         {/* Message Content */}
         <div className="prose prose-sm max-w-none dark:prose-invert">
-          <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]}>
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm, remarkMath]}
+            rehypePlugins={[rehypeKatex]}
+            components={{ code: (props) => <CodeBlock {...props} /> }}
+          >
             {preprocessLaTeX(message.content)}
           </ReactMarkdown>
         </div>
