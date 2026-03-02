@@ -5,7 +5,7 @@ import { ChatInput } from './chat-input'
 import { MCPServersPanel } from './mcp-servers-panel'
 import { useChat } from '@/hooks/use-chat'
 import { useMCPServers } from '@/hooks/use-mcp-servers'
-import { Settings, Trash2, ChevronDown } from 'lucide-react'
+import { Settings, Trash2, ChevronDown, Globe } from 'lucide-react'
 import { useState } from 'react'
 import type { ReasoningEffort, Verbosity, ModelId } from '@/types/chat'
 import { ErrorModal } from '@/components/ui/error-modal'
@@ -48,6 +48,8 @@ export function ChatInterface() {
     setVerbosity,
     model,
     setModel,
+    webSearch,
+    setWebSearch,
     sendMessage,
     stopStreaming,
     clearMessages,
@@ -137,7 +139,7 @@ export function ChatInterface() {
         {/* Settings Panel */}
         {showSettings && (
           <div className="mx-auto max-w-4xl mt-3 p-3 rounded-lg border bg-muted/30 space-y-3">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
               {/* Model Selection */}
               <div className="space-y-1">
                 <label className="text-xs font-medium text-muted-foreground">
@@ -241,6 +243,31 @@ export function ChatInterface() {
                   {showThinking ? 'Visible' : 'Hidden'}
                 </button>
               </div>
+
+              {/* Web Search Toggle */}
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">
+                  Web Search
+                </label>
+                <button
+                  onClick={() => setWebSearch(!webSearch)}
+                  disabled={isStreaming}
+                  className={`
+                    w-full flex items-center justify-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium
+                    transition-colors border
+                    disabled:opacity-50 disabled:cursor-not-allowed
+                    ${
+                      webSearch
+                        ? 'bg-thinking text-thinking-foreground border-thinking'
+                        : 'bg-background text-muted-foreground border-border hover:bg-accent'
+                    }
+                  `}
+                  title="Enable web_search_preview for real-time web grounding"
+                >
+                  <Globe className="h-3.5 w-3.5" />
+                  {webSearch ? 'On' : 'Off'}
+                </button>
+              </div>
             </div>
 
             {/* Current config summary */}
@@ -252,6 +279,8 @@ export function ChatInterface() {
               verbosity: <span className="font-mono font-medium text-foreground">{verbosity}</span>
               {' · '}
               reasoning summary: <span className="font-mono font-medium text-foreground">{showThinking ? 'auto' : 'none'}</span>
+              {' · '}
+              web search: <span className="font-mono font-medium text-foreground">{webSearch ? 'on' : 'off'}</span>
             </div>
 
             {/* MCP Servers */}

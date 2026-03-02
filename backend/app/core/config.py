@@ -98,6 +98,18 @@ class Settings(BaseSettings):
     # Application Insights
     applicationinsights_connection_string: Optional[str] = None
     
+    # Jaeger Tracing (for local development)
+    jaeger_endpoint: Optional[str] = None
+    enable_jaeger_tracing: bool = False
+    
+    # LangSmith OpenTelemetry Tracing
+    langsmith_tracing: bool = False
+    langsmith_otel_enabled: bool = False
+    langsmith_endpoint: Optional[str] = None
+    langsmith_api_key: Optional[str] = None
+    langsmith_project: str = "default"
+    langsmith_otel_only: bool = True  # Send only to Jaeger, not LangSmith cloud
+    
     # Feature Flags
     enable_streaming: bool = True
     enable_thinking_process: bool = True

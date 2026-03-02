@@ -100,6 +100,10 @@ class ChatRequest(BaseModel):
         default=None,
         description="MCP servers to use for tool calling during this request"
     )
+    enable_web_search: bool = Field(
+        default=False,
+        description="Enable web_search_preview tool for grounding responses with real-time web data"
+    )
 
     class Config:
         json_schema_extra = {

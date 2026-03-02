@@ -47,6 +47,10 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+# Setup tracing immediately after app creation (module level)
+from app.utils.tracing import setup_tracing
+setup_tracing(app)
+
 
 # Middleware: CORS
 app.add_middleware(

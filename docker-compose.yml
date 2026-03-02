@@ -34,11 +34,20 @@ services:
       - POSTGRESQL_USER=${POSTGRESQL_USER}
       - POSTGRESQL_PASSWORD=${POSTGRESQL_PASSWORD}
       - POSTGRESQL_SSL_MODE=${POSTGRESQL_SSL_MODE}
+      - JAEGER_ENDPOINT=http://jaeger:4318/v1/traces
+      - ENABLE_JAEGER_TRACING=true
+      # LangSmith OpenTelemetry integration for LangGraph/LangChain tracing
+      - LANGSMITH_OTEL_ENABLED=true
+      - LANGSMITH_TRACING=true
+      - LANGSMITH_OTEL_ONLY=true
+      - LANGSMITH_PROJECT=${LANGSMITH_PROJECT:-ai-chat-app}
     volumes:
       - ./backend:/app
     depends_on:
       postgres:
         condition: service_healthy
+      jaeger:
+        condition: service_started
     networks:
       - ai-app-network
     restart: unless-stopped
@@ -86,6 +95,19 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  # Jaeger All-in-One (for local tracing)
+  jaeger:
+    image: jaegertracing/jaeger:2.15.1
+    ports:
+      - "16686:16686"  # Jaeger UI
+      - "4318:4318"    # OTLP HTTP receiver
+      - "4317:4317"    # OTLP gRPC receiver
+    environment:
+      - LOG_LEVEL=info
+    networks:
+      - ai-app-network
+    restart: unless-stopped
 
 networks:
   ai-app-network:

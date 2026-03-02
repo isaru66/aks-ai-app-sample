@@ -16,6 +16,8 @@ export interface StreamChatParams {
   mcpServers?: MCPServerPayload[]
   /** Model deployment to use */
   model?: ModelId
+  /** Enable web_search_preview tool for real-time grounding */
+  webSearch?: boolean
 }
 
 export async function* streamChat(
@@ -40,6 +42,7 @@ export async function* streamChat(
       reasoning_effort: params.reasoningEffort ?? 'medium',
       verbosity: params.verbosity ?? 'medium',
       model: params.model ?? 'gpt-5.2',
+      enable_web_search: params.webSearch ?? false,
       ...(params.mcpServers && params.mcpServers.length > 0
         ? { mcp_servers: params.mcpServers }
         : {}),

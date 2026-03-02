@@ -57,6 +57,8 @@ export interface ChatRequest {
   model?: ModelId
   /** Active MCP servers for tool calling */
   mcp_servers?: MCPServerPayload[]
+  /** Enable web_search_preview tool for real-time grounding */
+  enable_web_search?: boolean
 }
 
 export interface ChatResponse {

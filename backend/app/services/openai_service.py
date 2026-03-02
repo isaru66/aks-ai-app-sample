@@ -5,6 +5,7 @@ import json
 from app.core.config import settings
 from app.core.logging import get_logger
 from app.models.schemas import ThinkingStep, StreamChunk, StreamChunkType
+from app.utils.tracing import trace_llm_call, trace_tool_call
 
 logger = get_logger(__name__)
 
@@ -119,65 +120,88 @@ class OpenAIService:
             # Tool-call loop: run until model stops requesting tools
             max_tool_rounds = 10
             for _round in range(max_tool_rounds):
-                create_kwargs: Dict[str, Any] = dict(
-                    model=deployment,
-                    input=input_items,
-                    stream=True,
-                    max_output_tokens=max_completion_tokens,
-                    reasoning=reasoning,
-                    text={"verbosity": verbosity},
-                )
-                if openai_tools:
-                    create_kwargs["tools"] = openai_tools
+                # Trace LLM API call
+                with trace_llm_call(
+                    model=model_id,
+                    operation="responses",
+                    streaming=True,
+                    thinking=show_thinking,
+                    effort=reasoning_effort,
+                    verbosity=verbosity,
+                    has_tools=bool(openai_tools),
+                    round=_round + 1,
+                ) as llm_span:
+                    create_kwargs: Dict[str, Any] = dict(
+                        model=deployment,
+                        input=input_items,
+                        stream=True,
+                        max_output_tokens=max_completion_tokens,
+                        reasoning=reasoning,
+                        text={"verbosity": verbosity},
+                    )
+                    if openai_tools:
+                        create_kwargs["tools"] = openai_tools
 
-                stream = await self.client.responses.create(**create_kwargs)
+                    stream = await self.client.responses.create(**create_kwargs)
 
-                step_number = 0
-                tool_calls_this_round: List[Dict[str, Any]] = []
-                current_tool_call: Optional[Dict[str, Any]] = None
+                    step_number = 0
+                    tool_calls_this_round: List[Dict[str, Any]] = []
+                    current_tool_call: Optional[Dict[str, Any]] = None
+                    total_thinking_tokens = 0
+                    total_content_tokens = 0
 
-                async for event in stream:
-                    event_type = event.type
+                    async for event in stream:
+                        event_type = event.type
 
-                    # Reasoning / thinking tokens
-                    if event_type == "response.reasoning_summary_text.delta":
-                        step_number += 1
-                        yield StreamChunk(
-                            type=StreamChunkType.THINKING,
-                            content=event.delta,
-                        )
+                        # Reasoning / thinking tokens
+                        if event_type == "response.reasoning_summary_text.delta":
+                            step_number += 1
+                            total_thinking_tokens += len(event.delta)
+                            
+                            yield StreamChunk(
+                                type=StreamChunkType.THINKING,
+                                content=event.delta,
+                            )
 
-                    # Output text tokens
-                    elif event_type == "response.output_text.delta":
-                        yield StreamChunk(
-                            type=StreamChunkType.CONTENT,
-                            content=event.delta,
-                        )
+                        # Output text tokens
+                        elif event_type == "response.output_text.delta":
+                            total_content_tokens += len(event.delta)
+                            yield StreamChunk(
+                                type=StreamChunkType.CONTENT,
+                                content=event.delta,
+                            )
 
-                    # Tool call accumulation
-                    elif event_type == "response.output_item.added":
-                        item = getattr(event, "item", None)
-                        if item and getattr(item, "type", None) == "function_call":
-                            current_tool_call = {
-                                "id": getattr(item, "call_id", getattr(item, "id", "")),
-                                "name": getattr(item, "name", ""),
-                                "arguments": "",
-                            }
+                        # Tool call accumulation
+                        elif event_type == "response.output_item.added":
+                            item = getattr(event, "item", None)
+                            if item and getattr(item, "type", None) == "function_call":
+                                current_tool_call = {
+                                    "id": getattr(item, "call_id", getattr(item, "id", "")),
+                                    "name": getattr(item, "name", ""),
+                                    "arguments": "",
+                                }
 
-                    elif event_type == "response.function_call_arguments.delta":
-                        if current_tool_call is not None:
-                            current_tool_call["arguments"] += getattr(event, "delta", "")
+                        elif event_type == "response.function_call_arguments.delta":
+                            if current_tool_call is not None:
+                                current_tool_call["arguments"] += getattr(event, "delta", "")
 
-                    elif event_type == "response.output_item.done":
-                        item = getattr(event, "item", None)
-                        if item and getattr(item, "type", None) == "function_call" and current_tool_call:
-                            current_tool_call["arguments"] = getattr(item, "arguments", current_tool_call["arguments"])
-                            tool_calls_this_round.append(current_tool_call)
-                            current_tool_call = None
+                        elif event_type == "response.output_item.done":
+                            item = getattr(event, "item", None)
+                            if item and getattr(item, "type", None) == "function_call" and current_tool_call:
+                                current_tool_call["arguments"] = getattr(item, "arguments", current_tool_call["arguments"])
+                                tool_calls_this_round.append(current_tool_call)
+                                current_tool_call = None
 
-                    # Stream complete
-                    elif event_type == "response.completed":
-                        break
+                        # Stream complete
+                        elif event_type == "response.completed":
+                            break
+                    
+                    # Add token counts to span
+                    if llm_span and llm_span.is_recording():
+                        llm_span.set_attribute("llm.thinking_tokens", total_thinking_tokens)
+                        llm_span.set_attribute("llm.content_tokens", total_content_tokens)
+                        llm_span.set_attribute("llm.thinking_steps", step_number)
+                        llm_span.set_attribute("llm.tool_calls", len(tool_calls_this_round))
 
                 # If no tool calls were requested, we're done
                 if not tool_calls_this_round or not tool_executor:
@@ -200,10 +224,19 @@ class OpenAIService:
                         metadata={"tool_name": fn_name, "tool_call_id": tc["id"]},
                     )
 
-                    try:
-                        tool_result = await tool_executor(fn_name, fn_args)
-                    except Exception as exc:
-                        tool_result = f"Error: {exc}"
+                    # Trace tool execution
+                    with trace_tool_call(fn_name, **fn_args) as tool_span:
+                        try:
+                            tool_result = await tool_executor(fn_name, fn_args)
+                            if tool_span and tool_span.is_recording():
+                                result_preview = str(tool_result)[:200] if tool_result else ""
+                                tool_span.set_attribute("tool.result_preview", result_preview)
+                                tool_span.set_attribute("tool.success", True)
+                        except Exception as exc:
+                            tool_result = f"Error: {exc}"
+                            if tool_span and tool_span.is_recording():
+                                tool_span.set_attribute("tool.success", False)
+                                tool_span.set_attribute("tool.error", str(exc))
 
                     # Append assistant tool_call + tool result to input for next round
                     input_items.append({

@@ -4,6 +4,7 @@ from langchain_core.messages import BaseMessage, HumanMessage, AIMessage
 from app.core.logging import get_logger
 from app.services.openai_service import openai_service
 from app.models.schemas import ThinkingStep, StreamChunk, StreamChunkType, MCPServerConfig
+from app.utils.tracing import trace_graph_execution, trace_tool_call
 
 logger = get_logger(__name__)
 
@@ -89,6 +90,8 @@ class ChatGraph:
         max_tokens: int = 16000,
         mcp_servers: Optional[List[MCPServerConfig]] = None,
         model_id: str = "gpt-5.2",
+        enable_web_search: bool = False,
+        conversation_id: str = "unknown",
     ) -> AsyncGenerator[StreamChunk, None]:
         """
         Stream chat response with thinking visualization.
@@ -100,58 +103,80 @@ class ChatGraph:
             verbosity: Text output verbosity
             max_tokens: Maximum output tokens
             mcp_servers: Optional MCP server configs for tool calling
+            enable_web_search: Add web_search_preview tool for real-time grounding
+            conversation_id: Conversation ID for tracing
 
         Yields:
             StreamChunk: Thinking and content chunks
         """
         logger.info(
             f"Starting chat stream (model={model_id}, effort={reasoning_effort}, verbosity={verbosity}, "
-            f"mcp_servers={len(mcp_servers) if mcp_servers else 0})"
+            f"mcp_servers={len(mcp_servers) if mcp_servers else 0}, web_search={enable_web_search})"
         )
 
-        tools = None
-        tool_executor = None
+        # Trace graph execution
+        with trace_graph_execution(
+            "ChatGraph",
+            conversation_id,
+            model=model_id,
+            thinking=show_thinking,
+            effort=reasoning_effort,
+            verbosity=verbosity,
+            web_search=enable_web_search,
+            mcp_servers_count=len(mcp_servers) if mcp_servers else 0,
+        ):
+            tools = None
+            tool_executor = None
 
-        if mcp_servers:
-            # Import here to avoid circular imports and keep it optional
-            from app.services.mcp_service import MCPService
+            if mcp_servers:
+                # Import here to avoid circular imports and keep it optional
+                from app.services.mcp_service import MCPService
 
-            mcp = MCPService(mcp_servers)
-            try:
-                await mcp.initialize_all()
-                tools = await mcp.get_openai_tools()
-                tool_executor = mcp.execute_tool_call
-                logger.info(f"MCP tools available: {[t['name'] for t in tools]}")
-            except Exception as exc:
-                logger.error(f"MCP initialization failed: {exc}", exc_info=True)
-                # Yield a warning thinking chunk but continue without tools
-                yield StreamChunk(
-                    type=StreamChunkType.THINKING,
-                    content=f"[MCP Warning] Failed to initialize MCP servers: {exc}",
-                    metadata={"mcp_error": str(exc)},
-                )
-                tools = None
-                tool_executor = None
+                mcp = MCPService(mcp_servers)
+                try:
+                    await mcp.initialize_all()
+                    tools = await mcp.get_openai_tools()
+                    tool_executor = mcp.execute_tool_call
+                    logger.info(f"MCP tools available: {[t['name'] for t in tools]}")
+                except Exception as exc:
+                    logger.error(f"MCP initialization failed: {exc}", exc_info=True)
+                    # Yield a warning thinking chunk but continue without tools
+                    yield StreamChunk(
+                        type=StreamChunkType.THINKING,
+                        content=f"[MCP Warning] Failed to initialize MCP servers: {exc}",
+                        metadata={"mcp_error": str(exc)},
+                    )
+                    tools = None
+                    tool_executor = None
+                    mcp = None
+            else:
                 mcp = None
-        else:
-            mcp = None
 
-        try:
-            # Use OpenAI service to stream with thinking (+ optional tools)
-            async for chunk in openai_service.stream_chat_with_thinking(
-                messages=messages,
-                show_thinking=show_thinking,
-                reasoning_effort=reasoning_effort,
-                verbosity=verbosity,
-                max_completion_tokens=max_tokens,
-                tools=tools,
-                tool_executor=tool_executor,
-                model_id=model_id,
-            ):
-                yield chunk
-        finally:
-            if mcp is not None:
-                await mcp.close_all()
+            # Add web_search_preview tool if enabled
+            if enable_web_search:
+                web_search_tool = {"type": "web_search_preview"}
+                if tools is None:
+                    tools = [web_search_tool]
+                else:
+                    tools = [web_search_tool] + tools
+                logger.info("Web search (web_search_preview) enabled for this request")
+
+            try:
+                # Use OpenAI service to stream with thinking (+ optional tools)
+                async for chunk in openai_service.stream_chat_with_thinking(
+                    messages=messages,
+                    show_thinking=show_thinking,
+                    reasoning_effort=reasoning_effort,
+                    verbosity=verbosity,
+                    max_completion_tokens=max_tokens,
+                    tools=tools,
+                    tool_executor=tool_executor,
+                    model_id=model_id,
+                ):
+                    yield chunk
+            finally:
+                if mcp is not None:
+                    await mcp.close_all()
     
     async def invoke(self, messages: List[BaseMessage]) -> Dict[str, Any]:
         """

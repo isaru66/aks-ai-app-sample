@@ -22,6 +22,7 @@ export function useChat(options: UseChatOptions = {}) {
   const [verbosity, setVerbosity] = useState<Verbosity>('low')
   const [showThinking, setShowThinking] = useState(true)
   const [model, setModel] = useState<ModelId>('gpt-5-mini')
+  const [webSearch, setWebSearch] = useState(false)
   const abortControllerRef = useRef<AbortController | null>(null)
 
   // Refs for collecting the full raw content (for storage) and thinking steps
@@ -137,6 +138,7 @@ export function useChat(options: UseChatOptions = {}) {
           verbosity,
           mcpServers: options.mcpServers,
           model,
+          webSearch,
         })) {
           // Stream is being processed through callbacks
         }
@@ -154,7 +156,7 @@ export function useChat(options: UseChatOptions = {}) {
         options.onError?.(error instanceof Error ? error.message : 'Unknown error')
       }
     },
-    [messages, isStreaming, options, showThinking, reasoningEffort, verbosity, model]
+    [messages, isStreaming, options, showThinking, reasoningEffort, verbosity, model, webSearch]
   )
 
   const stopStreaming = useCallback(() => {
@@ -193,6 +195,8 @@ export function useChat(options: UseChatOptions = {}) {
     setVerbosity,
     model,
     setModel,
+    webSearch,
+    setWebSearch,
     sendMessage,
     stopStreaming,
     clearMessages,
