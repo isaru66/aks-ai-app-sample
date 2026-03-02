@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server'
 import { withTracing, addSpanAttribute, addSpanEvent, recordSpanException } from '@/lib/tracing'
+import { propagation, context } from '@opentelemetry/api'
 
 // Backend service URL - uses Kubernetes internal DNS in production
 const BACKEND_URL = 
@@ -46,6 +47,8 @@ async function proxyToBackend(
         'accept',
         'user-agent',
         'x-request-id',
+        'traceparent',  // W3C Trace Context
+        'tracestate',   // W3C Trace Context
       ]
       
       headersToForward.forEach((header) => {
@@ -54,6 +57,18 @@ async function proxyToBackend(
           headers.set(header, value)
         }
       })
+
+      // Inject current trace context into headers for distributed tracing
+      // This ensures the backend trace is linked to the frontend trace
+      const carrier: Record<string, string> = {};
+      propagation.inject(context.active(), carrier);
+      
+      // Add injected trace headers to the request
+      Object.entries(carrier).forEach(([key, value]) => {
+        if (!headers.has(key)) {  // Don't override if already forwarded
+          headers.set(key, value);
+        }
+      });
 
       // Add X-Forwarded headers
       const clientIp = request.headers.get('x-forwarded-for') || 

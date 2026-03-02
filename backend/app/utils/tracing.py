@@ -122,6 +122,10 @@ def setup_tracing(app: FastAPI) -> None:
         tracer_provider = TracerProvider(resource=resource)
         trace.set_tracer_provider(tracer_provider)
         
+        # W3C Trace Context propagation is enabled by default in OpenTelemetry SDK
+        # The SDK automatically uses W3C Trace Context (traceparent, tracestate) and Baggage
+        logger.info("🔗 W3C Trace Context propagation enabled (default)")
+        
         logger.info(f"🎯 OpenTelemetry resource: service={settings.app_name}, env={settings.environment}")
         
         # Configure Jaeger for local development (priority)

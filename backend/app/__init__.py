@@ -1,2 +1,2 @@
-# Azure AI Chat Application Backend
+# AI App Backend
 __version__ = "1.0.0"

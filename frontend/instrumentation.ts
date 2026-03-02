@@ -24,6 +24,10 @@ export async function register() {
       const { NodeTracerProvider } = await import('@opentelemetry/sdk-trace-node');
       const { BatchSpanProcessor } = await import('@opentelemetry/sdk-trace-base');
       const { OTLPTraceExporter } = await import('@opentelemetry/exporter-trace-otlp-http');
+      const { propagation } = await import('@opentelemetry/api');
+      const { W3CTraceContextPropagator } = await import('@opentelemetry/core');
+      const { W3CBaggagePropagator } = await import('@opentelemetry/core');
+      const { CompositePropagator } = await import('@opentelemetry/core');
 
       // Create resource with service identification (using string literals to avoid deprecated constants)
       const resource = new Resource({
@@ -60,6 +64,17 @@ export async function register() {
 
       // Register the provider
       provider.register();
+
+      // Configure W3C Trace Context propagation for distributed tracing
+      propagation.setGlobalPropagator(
+        new CompositePropagator({
+          propagators: [
+            new W3CTraceContextPropagator(),  // W3C Trace Context (traceparent, tracestate)
+            new W3CBaggagePropagator()  // W3C Baggage
+          ],
+        })
+      );
+      console.log('🔗 W3C Trace Context propagation enabled');
 
       console.log('✅ OpenTelemetry instrumentation initialized');
       console.log('🔧 Next.js server-side requests will be traced');

@@ -40,7 +40,7 @@ async def lifespan(app: FastAPI):
 # Create FastAPI application
 app = FastAPI(
     title=settings.app_name,
-    description="Azure AI Chat Application with GPT-5.2 Streaming and Thinking Visualization",
+    description="AI App Backend with GPT-5.2 Streaming and Thinking Visualization",
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc",

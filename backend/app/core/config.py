@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     )
     
     # Application
-    app_name: str = "Azure AI Chat App"
+    app_name: str = "ai-app-backend"
     environment: str = "dev"
     debug: bool = False
     api_version: str = "v1"
