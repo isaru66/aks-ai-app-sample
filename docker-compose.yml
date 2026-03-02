@@ -65,12 +65,18 @@ services:
       # Backend service URL for server-side API proxy
       - BACKEND_SERVICE_URL=http://backend:8000
       - NEXT_PUBLIC_ENABLE_THINKING_DISPLAY=${NEXT_PUBLIC_ENABLE_THINKING_DISPLAY:-true}
+      # OpenTelemetry Configuration
+      - ENABLE_OTEL_TRACING=true
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318/v1/traces
+      - OTEL_SERVICE_NAME=ai-app-frontend
+      - ENVIRONMENT=development
     volumes:
       - ./frontend:/app
       - /app/node_modules
       - /app/.next
     depends_on:
       - backend
+      - jaeger
     networks:
       - ai-app-network
     restart: unless-stopped
