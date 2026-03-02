@@ -35,7 +35,7 @@ User Request
                   ↓
 ┌─────────────────────────────────────┐
 │  Backend (FastAPI)                  │
-│  Service: Azure AI Chat App         │
+│  Service: ai-app-backend         │
 │                                     │
 │  1. Extracts traceparent header ←── │ W3C Propagation
 │  2. Creates child span              │
@@ -173,7 +173,7 @@ async function proxyToBackend(request: NextRequest) {
    - Creates child span with same trace ID
 
 5. **Backend executes request**:
-   - Service: `Azure AI Chat App`
+   - Service: `ai-app-backend`
    - Span: `GET /api/v1/health`
    - Parent: `proxy-request` (from frontend)
 
@@ -181,7 +181,7 @@ async function proxyToBackend(request: NextRequest) {
    ```
    Trace: 4bf92f3577b34da6a3ce929d0e0e4736
    ├─ ai-app-frontend: proxy-request (35ms)
-   │  └─ Azure AI Chat App: GET /api/v1/health (28ms)
+   │  └─ ai-app-backend: GET /api/v1/health (28ms)
    │     └─ database: query (5ms)
    ```
 
@@ -224,7 +224,7 @@ Request Headers:
 3. Click **Find Traces**
 4. Look for traces with spans from both services:
    - `ai-app-frontend` (root span)
-   - `Azure AI Chat App` (child span)
+   - `ai-app-backend` (child span)
 
 #### Expected Result
 
@@ -237,7 +237,7 @@ A single trace should contain spans from both services, showing the complete req
 │ ai-app-frontend                                            │
 │   ├─ proxy-request (35ms)                                  │
 │   │                                                         │
-│ Azure AI Chat App                                          │
+│ ai-app-backend                                          │
 │   └─ GET /api/v1/health (28ms)                             │
 │       ├─ database: connection pool (2ms)                   │
 │       └─ database: query (5ms)                             │
@@ -354,7 +354,7 @@ w3cHeaders.forEach(header => {
 
 Service names appear in Jaeger UI. Use descriptive, consistent names:
 - Frontend: `ai-app-frontend`
-- Backend: `Azure AI Chat App`
+- Backend: `ai-app-backend`
 - Database: `postgresql`
 
 ### 3. Add Contextual Attributes
