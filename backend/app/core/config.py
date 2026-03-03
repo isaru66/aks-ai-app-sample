@@ -109,6 +109,13 @@ class Settings(BaseSettings):
     langsmith_api_key: Optional[str] = None
     langsmith_project: str = "default"
     langsmith_otel_only: bool = True  # Send only to Jaeger, not LangSmith cloud
+
+    # OTel GenAI Semantic Conventions - Opt-In Content Capture
+    # Enables recording of gen_ai.input.messages, gen_ai.output.messages,
+    # gen_ai.system_instructions, and gen_ai.tool.definitions on LLM spans.
+    # WARNING: These attributes may contain sensitive PII data.
+    # Set via OTEL_GENAI_CAPTURE_MESSAGE_CONTENT=true env var.
+    otel_genai_capture_message_content: bool = False
     
     # Feature Flags
     enable_streaming: bool = True

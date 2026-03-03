@@ -43,6 +43,7 @@ services:
       - LANGSMITH_PROJECT=${LANGSMITH_PROJECT:-ai-chat-app}
       - LANGSMITH_API_KEY=${LANGSMITH_API_KEY}
       - LANGSMITH_ENDPOINT=${LANGSMITH_ENDPOINT:-https://api.smith.langchain.com}
+      - OTEL_GENAI_CAPTURE_MESSAGE_CONTENT=${OTEL_GENAI_CAPTURE_MESSAGE_CONTENT:-false}
     volumes:
       - ./backend:/app
     depends_on:

@@ -5,7 +5,7 @@ import json
 from app.core.config import settings
 from app.core.logging import get_logger
 from app.models.schemas import ThinkingStep, StreamChunk, StreamChunkType
-from app.utils.tracing import trace_llm_call, trace_tool_call
+from app.utils.tracing import trace_llm_call, trace_tool_call, set_gen_ai_content_attributes
 
 logger = get_logger(__name__)
 
@@ -142,6 +142,13 @@ class OpenAIService:
                     if openai_tools:
                         create_kwargs["tools"] = openai_tools
 
+                    # Set opt-in input attributes before the API call
+                    set_gen_ai_content_attributes(
+                        llm_span,
+                        messages=input_items,
+                        tools=openai_tools,
+                    )
+
                     stream = await self.client.responses.create(**create_kwargs)
 
                     step_number = 0
@@ -149,6 +156,7 @@ class OpenAIService:
                     current_tool_call: Optional[Dict[str, Any]] = None
                     total_thinking_tokens = 0
                     total_content_tokens = 0
+                    full_response_content = ""  # accumulated for gen_ai.output.messages
 
                     async for event in stream:
                         event_type = event.type
@@ -166,6 +174,7 @@ class OpenAIService:
                         # Output text tokens
                         elif event_type == "response.output_text.delta":
                             total_content_tokens += len(event.delta)
+                            full_response_content += event.delta
                             yield StreamChunk(
                                 type=StreamChunkType.CONTENT,
                                 content=event.delta,
@@ -202,6 +211,15 @@ class OpenAIService:
                         llm_span.set_attribute("llm.content_tokens", total_content_tokens)
                         llm_span.set_attribute("llm.thinking_steps", step_number)
                         llm_span.set_attribute("llm.tool_calls", len(tool_calls_this_round))
+
+                    # Set opt-in output attributes after the stream completes
+                    finish_reason = "tool_calls" if tool_calls_this_round else "stop"
+                    set_gen_ai_content_attributes(
+                        llm_span,
+                        output_content=full_response_content,
+                        output_tool_calls=tool_calls_this_round if tool_calls_this_round else None,
+                        finish_reason=finish_reason,
+                    )
 
                 # If no tool calls were requested, we're done
                 if not tool_calls_this_round or not tool_executor:

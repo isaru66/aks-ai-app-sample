@@ -1,7 +1,8 @@
 import time
 import os
+import json
 from contextlib import contextmanager
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from opentelemetry import trace
 from opentelemetry.sdk.trace import TracerProvider, ReadableSpan
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, SpanProcessor, SpanExporter
@@ -58,6 +59,219 @@ class FilteringSpanProcessor(SpanProcessor):
     def force_flush(self, timeout_millis: int = 30000) -> bool:
         """Forward force_flush to wrapped processor."""
         return self.wrapped_processor.force_flush(timeout_millis)
+
+
+# ---------------------------------------------------------------------------
+# GenAI Semantic Conventions — Opt-In Content Capture Helpers
+# Ref: https://opentelemetry.io/docs/specs/semconv/gen-ai/azure-ai-inference/
+# ---------------------------------------------------------------------------
+
+def _is_content_capture_enabled() -> bool:
+    """Return True when opt-in gen_ai content capture is enabled.
+
+    Controlled by the OTEL_GENAI_CAPTURE_MESSAGE_CONTENT env var / config
+    setting. Defaults to False because these attributes may contain PII.
+    """
+    from app.core.config import settings  # lazy import to avoid circular deps
+    return getattr(settings, "otel_genai_capture_message_content", False)
+
+
+def _build_system_instructions_schema(
+    messages: List[Dict[str, Any]]
+) -> List[Dict[str, Any]]:
+    """Extract system / developer messages into gen_ai.system_instructions schema.
+
+    Schema: [{"type": "text", "content": "..."}]
+    """
+    result: List[Dict[str, Any]] = []
+    for msg in messages:
+        role = msg.get("role", "")
+        if role not in ("system", "developer"):
+            continue
+        content = msg.get("content", "")
+        if isinstance(content, str):
+            if content:
+                result.append({"type": "text", "content": content})
+        elif isinstance(content, list):
+            for item in content:
+                if isinstance(item, dict) and item.get("type") == "text":
+                    result.append({"type": "text", "content": item.get("text", "")})
+    return result
+
+
+def _build_input_messages_schema(
+    messages: List[Dict[str, Any]]
+) -> List[Dict[str, Any]]:
+    """Convert conversation messages (non-system) into gen_ai.input.messages schema.
+
+    Schema: [{"role": "user", "parts": [{"type": "text", "content": "..."}]}]
+    Tool call / function_call items from the Responses API multi-round input
+    are also included using appropriate part types.
+    """
+    result: List[Dict[str, Any]] = []
+    for msg in messages:
+        role = msg.get("role", "")
+        msg_type = msg.get("type", "")
+
+        # Skip system / developer messages (captured in system_instructions)
+        if role in ("system", "developer"):
+            continue
+
+        # Responses-API function_call output item (tool result)
+        if msg_type == "function_call_output":
+            result.append({
+                "role": "tool",
+                "parts": [{
+                    "type": "tool_call_response",
+                    "id": msg.get("call_id", ""),
+                    "content": msg.get("output", ""),
+                }],
+            })
+            continue
+
+        # Responses-API function_call item (assistant tool call)
+        if msg_type == "function_call":
+            try:
+                arguments = json.loads(msg.get("arguments", "{}"))
+            except (json.JSONDecodeError, TypeError):
+                arguments = msg.get("arguments", {})
+            result.append({
+                "role": "assistant",
+                "parts": [{
+                    "type": "tool_call",
+                    "id": msg.get("call_id", ""),
+                    "name": msg.get("name", ""),
+                    "arguments": arguments,
+                }],
+            })
+            continue
+
+        # Standard chat message
+        content = msg.get("content", "")
+        if isinstance(content, str):
+            parts: List[Dict[str, Any]] = [{"type": "text", "content": content}]
+        elif isinstance(content, list):
+            parts = []
+            for item in content:
+                if isinstance(item, dict):
+                    if item.get("type") == "text":
+                        parts.append({"type": "text", "content": item.get("text", "")})
+                    else:
+                        parts.append(item)
+                else:
+                    parts.append({"type": "text", "content": str(item)})
+        else:
+            parts = [{"type": "text", "content": str(content)}]
+
+        if role:
+            result.append({"role": role, "parts": parts})
+
+    return result
+
+
+def _build_output_messages_schema(
+    content: str,
+    finish_reason: str = "stop",
+    tool_calls: Optional[List[Dict[str, Any]]] = None,
+) -> List[Dict[str, Any]]:
+    """Build gen_ai.output.messages schema from model response.
+
+    Schema: [{"role": "assistant", "parts": [...], "finish_reason": "stop"}]
+    """
+    parts: List[Dict[str, Any]] = []
+    if content:
+        parts.append({"type": "text", "content": content})
+    if tool_calls:
+        for tc in tool_calls:
+            try:
+                arguments = json.loads(tc.get("arguments", "{}"))
+            except (json.JSONDecodeError, TypeError):
+                arguments = tc.get("arguments", {})
+            parts.append({
+                "type": "tool_call",
+                "id": tc.get("id", ""),
+                "name": tc.get("name", ""),
+                "arguments": arguments,
+            })
+    return [{"role": "assistant", "parts": parts, "finish_reason": finish_reason}]
+
+
+def _build_tool_definitions_schema(
+    tools: List[Dict[str, Any]]
+) -> List[Dict[str, Any]]:
+    """Convert OpenAI/Responses API tool definitions into gen_ai.tool.definitions schema.
+
+    Schema: [{"type": "function", "name": "...", "description": "...", "parameters": {...}}]
+    """
+    result: List[Dict[str, Any]] = []
+    for tool in tools:
+        if tool.get("type") == "function":
+            fn = tool.get("function", tool)  # some callers put attrs at top level
+            result.append({
+                "type": "function",
+                "name": fn.get("name", tool.get("name", "")),
+                "description": fn.get("description", tool.get("description", "")),
+                "parameters": fn.get("parameters", tool.get("parameters", {})),
+            })
+        else:
+            result.append(tool)
+    return result
+
+
+def set_gen_ai_content_attributes(
+    span: trace.Span,
+    messages: Optional[List[Dict[str, Any]]] = None,
+    tools: Optional[List[Dict[str, Any]]] = None,
+    output_content: Optional[str] = None,
+    output_tool_calls: Optional[List[Dict[str, Any]]] = None,
+    finish_reason: str = "stop",
+) -> None:
+    """Set opt-in gen_ai content attributes on a span.
+
+    Records the four opt-in attributes defined in the Azure AI Inference
+    semantic conventions:
+      - gen_ai.system_instructions  (extracted from system/developer messages)
+      - gen_ai.input.messages       (non-system conversation history)
+      - gen_ai.tool.definitions     (tools available to the model)
+      - gen_ai.output.messages      (model-generated response)
+
+    Nothing is recorded unless ``otel_genai_capture_message_content=true``
+    (env: ``OTEL_GENAI_CAPTURE_MESSAGE_CONTENT``) because these attributes
+    may contain sensitive PII data.
+
+    Args:
+        span: The active recording span.
+        messages: Full message list sent to the model (chat + system roles).
+        tools: Tool definitions provided to the model (OpenAI format).
+        output_content: Accumulated text generated by the model.
+        output_tool_calls: Tool calls requested by the model this round.
+        finish_reason: Reason the model stopped ("stop", "tool_calls", etc.).
+    """
+    if not span or not span.is_recording():
+        return
+    if not _is_content_capture_enabled():
+        return
+
+    if messages:
+        system_instructions = _build_system_instructions_schema(messages)
+        if system_instructions:
+            span.set_attribute(
+                "gen_ai.system_instructions", json.dumps(system_instructions)
+            )
+
+        input_msgs = _build_input_messages_schema(messages)
+        if input_msgs:
+            span.set_attribute("gen_ai.input.messages", json.dumps(input_msgs))
+
+    if tools:
+        tool_defs = _build_tool_definitions_schema(tools)
+        span.set_attribute("gen_ai.tool.definitions", json.dumps(tool_defs))
+
+    if output_content is not None or output_tool_calls:
+        output_msgs = _build_output_messages_schema(
+            output_content or "", finish_reason, output_tool_calls
+        )
+        span.set_attribute("gen_ai.output.messages", json.dumps(output_msgs))
 
 
 def setup_tracing(app: FastAPI) -> None:
@@ -344,30 +558,47 @@ def trace_tool_call(tool_name: str, **arguments):
 def trace_llm_call(model: str, operation: str = "completion", **attributes):
     """
     Context manager for tracing LLM API calls.
-    
+
+    Sets standard gen_ai semantic convention attributes on the span in addition
+    to legacy ``llm.*`` attributes for backward compatibility.
+    Call :func:`set_gen_ai_content_attributes` on the yielded span to record
+    the four opt-in content attributes (input/output messages, system
+    instructions, tool definitions).
+
     Args:
         model: Model name (e.g., "gpt-5.2", "gpt-5-mini")
         operation: Type of operation ("completion", "embedding", "responses")
         **attributes: Additional attributes
-    
+
     Example:
         with trace_llm_call("gpt-5.2", "responses", streaming=True) as span:
             response = await client.responses.create(...)
-            span.set_attribute("llm.response_tokens", token_count)
+            set_gen_ai_content_attributes(span, messages=..., output_content=...)
     """
     if _tracer is None:
         yield None
         return
-    
-    with _tracer.start_as_current_span(f"llm.{operation}") as span:
+
+    # Map operation to gen_ai.operation.name well-known values
+    _op_name_map = {"completion": "chat", "responses": "chat", "embedding": "embeddings"}
+    gen_ai_op = _op_name_map.get(operation, operation)
+
+    with _tracer.start_as_current_span(f"{gen_ai_op} {model}") as span:
         if span.is_recording():
+            # Standard gen_ai semantic convention attributes
+            span.set_attribute("gen_ai.operation.name", gen_ai_op)
+            span.set_attribute("gen_ai.request.model", model)
+            span.set_attribute("gen_ai.provider.name", "azure.ai.inference")
+            span.set_attribute("azure.resource_provider.namespace", "Microsoft.CognitiveServices")
+
+            # Legacy attributes (kept for backward compatibility)
             span.set_attribute("llm.model", model)
             span.set_attribute("llm.operation", operation)
             span.set_attribute("operation.type", "llm_call")
-            
+
             for key, value in attributes.items():
                 span.set_attribute(f"llm.{key}", str(value))
-        
+
         try:
             yield span
         except Exception as e:
