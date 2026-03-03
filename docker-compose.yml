@@ -41,6 +41,8 @@ services:
       - LANGSMITH_TRACING=true
       - LANGSMITH_OTEL_ONLY=true
       - LANGSMITH_PROJECT=${LANGSMITH_PROJECT:-ai-chat-app}
+      - LANGSMITH_API_KEY=${LANGSMITH_API_KEY}
+      - LANGSMITH_ENDPOINT=${LANGSMITH_ENDPOINT:-https://api.smith.langchain.com}
     volumes:
       - ./backend:/app
     depends_on:

@@ -109,6 +109,17 @@ def setup_tracing(app: FastAPI) -> None:
             logger.info(f"   LANGSMITH_TRACING={os.environ['LANGSMITH_TRACING']}")
             logger.info(f"   LANGSMITH_OTEL_ONLY={os.environ['LANGSMITH_OTEL_ONLY']}")
             logger.info(f"   LANGSMITH_PROJECT={settings.langsmith_project}")
+            
+            # Initialize LangSmith client when OTEL_ONLY=false to enable dual export
+            if not settings.langsmith_otel_only and settings.langsmith_api_key:
+                try:
+                    from langsmith import Client
+                    ls_client = Client()
+                    logger.info(f"✅ LangSmith client initialized for cloud export")
+                    logger.info(f"   Project: {settings.langsmith_project}")
+                except Exception as e:
+                    logger.warning(f"⚠️  Failed to initialize LangSmith client: {e}")
+                    logger.warning(f"   Traces will only be sent to OTEL backend")
         
         # Create resource with service identification
         resource = Resource.create({
@@ -147,7 +158,10 @@ def setup_tracing(app: FastAPI) -> None:
             logger.info("🔇 Filtering out ASGI response body event spans")
             
             if settings.langsmith_otel_enabled:
-                logger.info("✅ LangSmith OTEL integration enabled - LangGraph/LangChain traces → Jaeger")
+                if settings.langsmith_otel_only:
+                    logger.info("✅ LangSmith OTEL integration enabled - LangGraph/LangChain traces → Jaeger only")
+                else:
+                    logger.info("✅ LangSmith OTEL integration enabled - LangGraph/LangChain traces → Jaeger + LangSmith cloud")
         
         # Configure Azure Monitor for production (fallback)
         elif settings.applicationinsights_connection_string:
@@ -167,7 +181,10 @@ def setup_tracing(app: FastAPI) -> None:
             logger.info("🔇 Filtering out ASGI response body event spans")
             
             if settings.langsmith_otel_enabled:
-                logger.info("✅ LangSmith OTEL integration enabled - LangGraph/LangChain traces → App Insights")
+                if settings.langsmith_otel_only:
+                    logger.info("✅ LangSmith OTEL integration enabled - LangGraph/LangChain traces → App Insights only")
+                else:
+                    logger.info("✅ LangSmith OTEL integration enabled - LangGraph/LangChain traces → App Insights + LangSmith cloud")
         
         else:
             logger.warning(
